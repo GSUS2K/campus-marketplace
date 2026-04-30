@@ -70,6 +70,9 @@ const sendOTP = async (email, otp) => {
     console.log("Real Email dispatched to: %s", email);
   } catch (err) {
     console.error("Failed to send Actual OTP via Nodemailer. Did you set up the .env?", err);
+    console.log("-----------------------------------------");
+    console.log(`[FALLBACK] OTP for ${email} is: ${otp}`);
+    console.log("-----------------------------------------");
   }
 };
 
