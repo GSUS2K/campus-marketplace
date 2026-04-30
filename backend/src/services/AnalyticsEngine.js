@@ -6,10 +6,21 @@ import EventStream from '../models/EventStream.js';
  */
 class AnalyticsEngine {
   constructor() {
-    this.kafka = new Kafka({
+    const kafkaConfig = {
       clientId: 'campus-marketplace',
       brokers: [process.env.KAFKA_BROKER || 'localhost:9092']
-    });
+    };
+
+    if (process.env.KAFKA_USERNAME && process.env.KAFKA_PASSWORD) {
+      kafkaConfig.ssl = true;
+      kafkaConfig.sasl = {
+        mechanism: 'scram-sha-256',
+        username: process.env.KAFKA_USERNAME,
+        password: process.env.KAFKA_PASSWORD,
+      };
+    }
+
+    this.kafka = new Kafka(kafkaConfig);
 
     this.producer = this.kafka.producer();
     this.isConnected = false;
