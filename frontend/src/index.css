@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-color: 248, 246, 240; /* #F8F6F0 Cream */
+    --text-color: 10, 10, 10; /* #0A0A0A Black */
+    --accent-color: 255, 0, 0; /* #FF0000 Pure Red */
+    color-scheme: light;
+  }
+  
+  /* Outfit Theme Toggle Variants */
+  html[data-theme='dark'] {
+    --bg-color: 17, 17, 17; /* #111111 Off-black */
+    --text-color: 248, 246, 240; /* #F8F6F0 Cream */
+    --accent-color: 0, 85, 255; /* #0055FF Blue */
+  }
+  
+  html[data-theme='matcha'] {
+    --bg-color: 246, 244, 232; /* #F6F4E8 Matcha bg */
+    --text-color: 47, 72, 88; /* #2F4858 Matcha text */
+    --accent-color: 196, 214, 176; /* #C4D6B0 Matcha accent */
+  }
+
+  html, body {
+    overflow-x: hidden;
+  }
+
+  body {
+    @apply antialiased scroll-smooth overflow-x-hidden;
+    background-color: rgb(var(--bg-color));
+    color: rgb(var(--text-color));
+    font-family: "Helvetica Neue", Helvetica, Arial, "Inter", sans-serif;
+    transition: background-color 0.5s ease, color 0.5s ease;
+  }
+  
+  /* Extremely bold font weight for Outfit style */
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    text-transform: uppercase;
+  }
+}
+
+@layer utilities {
+  .tracking-outfit {
+    letter-spacing: -0.05em;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.7s ease-out forwards;
+}
+
+/* WebGL Canvas Container */
+#webgl-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0; /* Brought forward so it's clearly visible */
+  pointer-events: none;
+  opacity: 0.6; /* Softened slightly so it doesn't overpower text */
+}
+
+/* Ensure content sits above canvas but allows it to show through */
+.content-layer {
+  position: relative;
+  z-index: 10;
+  background-color: transparent;
+}
