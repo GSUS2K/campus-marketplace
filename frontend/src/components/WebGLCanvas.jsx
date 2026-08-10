@@ -5,20 +5,27 @@ const WebGLCanvas = () => {
 
   useEffect(() => {
     const canvas = canvasRef.current;
+    if (!canvas) return undefined;
+
     const ctx = canvas.getContext('2d');
+    if (!ctx) return undefined;
+
+    let animationFrameId = 0;
     let width = window.innerWidth;
     let height = window.innerHeight;
-    canvas.width = width;
-    canvas.height = height;
-
     let particles = [];
     let mouse = { x: width / 2, y: height / 2 };
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const particleCount = prefersReducedMotion ? 24 : window.innerWidth < 768 ? 48 : 110;
+
+    canvas.width = width;
+    canvas.height = height;
 
     const handleMouseMove = (e) => {
       mouse.x = e.clientX;
       mouse.y = e.clientY;
     };
-    
+
     const handleResize = () => {
       width = window.innerWidth;
       height = window.innerHeight;
@@ -33,30 +40,32 @@ const WebGLCanvas = () => {
       constructor() {
         this.x = Math.random() * width;
         this.y = Math.random() * height;
-        this.size = Math.random() * 3 + 1;
-        this.speedX = Math.random() * 2 - 1;
-        this.speedY = Math.random() * 2 - 1;
+        this.size = Math.random() * 2.5 + 0.75;
+        this.speedX = Math.random() * 1.2 - 0.6;
+        this.speedY = Math.random() * 1.2 - 0.6;
       }
+
       update() {
         this.x += this.speedX;
         this.y += this.speedY;
 
-        // Mouse interaction (repel)
-        let dx = mouse.x - this.x;
-        let dy = mouse.y - this.y;
-        let distance = Math.sqrt(dx * dx + dy * dy);
+        const dx = mouse.x - this.x;
+        const dy = mouse.y - this.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
         if (distance < 100) {
-          this.x -= dx / 10;
-          this.y -= dy / 10;
+          this.x -= dx / 12;
+          this.y -= dy / 12;
         }
 
-        if (this.x > width || this.x < 0) this.speedX *= -1;
-        if (this.y > height || this.y < 0) this.speedY *= -1;
+        if (this.x > width) this.x = 0;
+        if (this.x < 0) this.x = width;
+        if (this.y > height) this.y = 0;
+        if (this.y < 0) this.y = height;
       }
-      draw() {
-        // We use CSS variables to dynamically match the theme!
-        const rawColor = getComputedStyle(document.documentElement).getPropertyValue('--text-color').trim();
-        ctx.fillStyle = rawColor ? `rgb(${rawColor})` : '#000';
+
+      draw(color) {
+        ctx.fillStyle = color;
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
         ctx.fill();
@@ -65,43 +74,50 @@ const WebGLCanvas = () => {
 
     const init = () => {
       particles = [];
-      for (let i = 0; i < 150; i++) {
+      for (let i = 0; i < particleCount; i += 1) {
         particles.push(new Particle());
       }
     };
 
     const animate = () => {
+      const rawColor = getComputedStyle(document.documentElement).getPropertyValue('--text-color').trim();
+      const color = rawColor ? `rgb(${rawColor})` : '#000';
+
       ctx.clearRect(0, 0, width, height);
-      for (let i = 0; i < particles.length; i++) {
-        particles[i].update();
-        particles[i].draw();
-        
-        // Draw lines between close particles to create a 'mesh/webgl' node effect
-        for (let j = i; j < particles.length; j++) {
-          let dx = particles[i].x - particles[j].x;
-          let dy = particles[i].y - particles[j].y;
-          let distance = Math.sqrt(dx * dx + dy * dy);
-          
+      ctx.globalAlpha = 1;
+
+      for (let i = 0; i < particles.length; i += 1) {
+        const particle = particles[i];
+        particle.update();
+        particle.draw(color);
+
+        for (let j = i + 1; j < particles.length; j += 1) {
+          const other = particles[j];
+          const dx = particle.x - other.x;
+          const dy = particle.y - other.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+
           if (distance < 100) {
             ctx.beginPath();
-            const rawColor = getComputedStyle(document.documentElement).getPropertyValue('--text-color').trim();
-            ctx.strokeStyle = rawColor ? `rgb(${rawColor})` : '#000';
+            ctx.strokeStyle = color;
             ctx.globalAlpha = 1 - (distance / 100);
             ctx.lineWidth = 0.5;
-            ctx.moveTo(particles[i].x, particles[i].y);
-            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.moveTo(particle.x, particle.y);
+            ctx.lineTo(other.x, other.y);
             ctx.stroke();
-            ctx.globalAlpha = 1.0;
+            ctx.globalAlpha = 1;
           }
         }
       }
-      requestAnimationFrame(animate);
+
+      animationFrameId = requestAnimationFrame(animate);
     };
 
     init();
-    animate();
+    animationFrameId = requestAnimationFrame(animate);
 
     return () => {
+      cancelAnimationFrame(animationFrameId);
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('resize', handleResize);
     };

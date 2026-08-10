@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { DEMO_ANALYTICS } from '../data/demoContent';
 
 const AnalyticsDashboard = () => {
   const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [pulse, setPulse] = useState(false);
 
   const fetchDemand = async () => {
     try {
@@ -13,9 +13,9 @@ const AnalyticsDashboard = () => {
       });
       const json = await res.json();
       setData(json);
-      setPulse(p => !p); // trigger a visual blip on update
     } catch (err) {
       console.error(err);
+      setData(DEMO_ANALYTICS);
     } finally {
       setIsLoading(false);
     }
@@ -30,7 +30,7 @@ const AnalyticsDashboard = () => {
   if (isLoading) {
     return (
       <div className="w-full bg-bg min-h-screen pt-32 flex justify-center">
-        <p className="text-[10px] tracking-[0.4em] uppercase text-theme/30 animate-pulse">Initializing Data Stream…</p>
+        <p className="text-[10px] tracking-[0.4em] uppercase text-theme/30 animate-pulse">Initializing Data Stream...</p>
       </div>
     );
   }

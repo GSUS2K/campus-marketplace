@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const HOSTELS = ['BH1', 'BH2', 'BH3', 'BH4', 'BH5', 'BH6', 'BH7', 'BH8', 'BH9', 'BH10', 'Boys Studio', 'Day Scholar', 'GH1', 'GH2', 'GH3', 'GH4', 'GH5', 'GH6', 'Staff Residence'];
 
 const Login = () => {
-  const [mode, setMode] = useState('login'); // 'login', 'register', 'verify', 'forgot', 'reset'
+  const navigate = useNavigate();
+  const [mode, setMode] = useState('login');
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -18,11 +21,10 @@ const Login = () => {
     newPassword: ''
   });
 
-  // Pre-load remembered email
-  React.useEffect(() => {
+  useEffect(() => {
     const savedEmail = localStorage.getItem('outfit_remembered_email');
     if (savedEmail) {
-      setFormData(prev => ({ ...prev, email: savedEmail }));
+      setFormData((prev) => ({ ...prev, email: savedEmail }));
       setRememberMe(true);
     }
   }, []);
@@ -36,39 +38,39 @@ const Login = () => {
     setIsLoading(true);
     setErrorMsg('');
     setSuccessMsg('');
-    
+
     if (mode === 'register' && !formData.email.endsWith('@lpu.in')) {
       setErrorMsg('Registration strictly limited to @lpu.in domains.');
       setIsLoading(false);
       return;
     }
-    
+
     let endpoint = '/api/auth/login';
     let payload = { email: formData.email, password: formData.password };
-    
+
     if (mode === 'register') {
-        endpoint = '/api/auth/register';
-        payload = { email: formData.email, password: formData.password, name: formData.name, campusLocation: formData.campusLocation };
+      endpoint = '/api/auth/register';
+      payload = { email: formData.email, password: formData.password, name: formData.name, campusLocation: formData.campusLocation, role: formData.role };
     } else if (mode === 'verify') {
-        endpoint = '/api/auth/verify-otp';
-        payload = { email: formData.email, otp: formData.otp };
+      endpoint = '/api/auth/verify-otp';
+      payload = { email: formData.email, otp: formData.otp };
     } else if (mode === 'forgot') {
-        endpoint = '/api/auth/password/request';
-        payload = { email: formData.email };
+      endpoint = '/api/auth/password/request';
+      payload = { email: formData.email };
     } else if (mode === 'reset') {
-        endpoint = '/api/auth/password/reset';
-        payload = { email: formData.email, otp: formData.otp, newPassword: formData.newPassword };
+      endpoint = '/api/auth/password/reset';
+      payload = { email: formData.email, otp: formData.otp, newPassword: formData.newPassword };
     }
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}${endpoint}`, {
+      const res = await fetch(`${API_BASE}${endpoint}`, {
         method: mode === 'reset' ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      
+
       const data = await res.json();
-      
+
       if (!res.ok) {
         throw new Error(data.msg || data.errors?.[0]?.msg || 'Authentication failed');
       }
@@ -81,7 +83,7 @@ const Login = () => {
         }
         localStorage.setItem('trms_token', data.token);
         localStorage.setItem('trms_user', JSON.stringify(data.user));
-        window.location.href = '/'; 
+        navigate('/');
       } else if (mode === 'reset') {
         setMode('login');
         setSuccessMsg('Password updated successfully. You may now authenticate.');
@@ -89,9 +91,9 @@ const Login = () => {
         setMode('reset');
         setSuccessMsg(`Reset PIN dispatched to ${formData.email}. Check inbox.`);
       } else {
-        setFormData(prev => ({ ...prev, otp: '' }));
+        setFormData((prev) => ({ ...prev, otp: '' }));
         setMode('verify');
-        setSuccessMsg(`OTP dispatched to ${formData.email}. Check terminal/inbox!`);
+        setSuccessMsg(`OTP dispatched to ${formData.email}. Check terminal/inbox.`);
       }
     } catch (err) {
       setErrorMsg(err.message);
@@ -101,10 +103,9 @@ const Login = () => {
   };
 
   return (
-    <div className="flex min-h-[80vh] font-sans transition-colors duration-500 flex-col items-center justify-center bg-transparent px-4">
-      <div className="w-full max-w-[600px] border-[3px] border-theme bg-bg/90 backdrop-blur-md p-10 lg:p-16">
-        
-        <div className="mb-12">
+    <div className="flex min-h-[80vh] font-sans transition-colors duration-500 flex-col items-center justify-center bg-transparent px-4 py-10">
+      <div className="w-full max-w-[620px] border-[3px] border-theme bg-bg/90 backdrop-blur-md p-6 sm:p-10 lg:p-16 rounded-[2.5rem] shadow-2xl">
+        <div className="mb-10">
           <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tighter mb-4 text-theme">
             {mode === 'login' && 'ACCESS'}
             {mode === 'register' && 'JOIN'}
@@ -115,106 +116,159 @@ const Login = () => {
           <p className="font-bold text-[13px] uppercase opacity-70">
             {mode === 'login' && 'Return to the curation.'}
             {mode === 'register' && 'Exclusive access for academics.'}
-            {mode === 'verify' && 'Identity Validation.'}
+            {mode === 'verify' && 'Identity validation.'}
             {mode === 'forgot' && 'Transmit reset sequence.'}
             {mode === 'reset' && 'Establish new key.'}
           </p>
         </div>
-        
+
         {errorMsg && (
-          <div className="mb-8 w-full p-4 border-[2px] border-theme text-center bg-bg shadow-lg">
+          <div className="mb-6 w-full p-4 border-[2px] border-theme text-center bg-bg shadow-lg rounded-2xl">
             <p className="font-bold text-[11px] uppercase text-theme">{errorMsg}</p>
           </div>
         )}
+
         {successMsg && (
-          <div className="mb-8 w-full p-4 border-[2px] border-theme text-center bg-bg shadow-lg">
+          <div className="mb-6 w-full p-4 border-[2px] border-theme text-center bg-bg shadow-lg rounded-2xl">
             <p className="font-bold text-[11px] uppercase text-theme">{successMsg}</p>
           </div>
         )}
 
         <form className="w-full space-y-6" onSubmit={handleAuthSubmit}>
-          
           {(mode === 'verify' || mode === 'reset') ? (
             <div className="space-y-6">
-              <input key="otp-input" name="otp" type="text" required onChange={handleChange} maxLength={6}
+              <input
+                name="otp"
+                type="text"
+                required
+                onChange={handleChange}
+                maxLength={6}
                 value={formData.otp}
                 className="w-full bg-transparent border-b-[3px] border-theme py-4 text-center text-4xl tracking-[1em] font-black text-theme focus:outline-none transition-colors placeholder-theme/30"
-                placeholder="------" />
+                placeholder="------"
+              />
               {mode === 'reset' && (
-                  <input key="new-pass-input" name="newPassword" type="password" required onChange={handleChange} value={formData.newPassword}
-                    className="w-full bg-transparent border-b-[3px] border-theme py-4 font-bold text-[13px] uppercase text-theme focus:outline-none transition-colors placeholder-theme/30"
-                    placeholder="New Security Key" />
+                <input
+                  name="newPassword"
+                  type="password"
+                  required
+                  onChange={handleChange}
+                  value={formData.newPassword}
+                  className="w-full bg-transparent border-b-[3px] border-theme py-4 font-bold text-[13px] uppercase text-theme focus:outline-none transition-colors placeholder-theme/30"
+                  placeholder="New Security Key"
+                />
               )}
             </div>
           ) : (
             <div className="space-y-6">
               {mode === 'register' && (
                 <div className="space-y-6">
-                  <input key="name-input" name="name" type="text" required onChange={handleChange} value={formData.name}
+                  <input
+                    name="name"
+                    type="text"
+                    required
+                    onChange={handleChange}
+                    value={formData.name}
                     className="w-full bg-transparent border-b-[3px] border-theme py-4 font-bold text-[13px] uppercase text-theme focus:outline-none transition-colors placeholder-theme/30"
-                    placeholder="Full Name" />
-                  
-                  <div className="flex gap-4">
-                    <div className="relative flex-1">
-                      <select name="campusLocation" value={formData.campusLocation} onChange={handleChange}
-                        className="w-full bg-transparent border-b-[3px] border-theme py-4 font-bold text-[13px] uppercase text-theme focus:outline-none appearance-none cursor-pointer">
-                        {HOSTELS.map(h => <option key={h} value={h} className="bg-bg text-theme">{h}</option>)}
-                      </select>
-                    </div>
+                    placeholder="Full Name"
+                  />
 
-                    <div className="relative flex-1">
-                      <select name="role" value={formData.role} onChange={handleChange}
-                        className="w-full bg-transparent border-b-[3px] border-theme py-4 font-bold text-[13px] uppercase text-theme focus:outline-none appearance-none cursor-pointer">
-                        <option value="buyer" className="bg-bg text-theme">Buyer</option>
-                        <option value="seller" className="bg-bg text-theme">Seller</option>
-                      </select>
-                    </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <select
+                      name="campusLocation"
+                      value={formData.campusLocation}
+                      onChange={handleChange}
+                      className="w-full bg-transparent border-b-[3px] border-theme py-4 font-bold text-[13px] uppercase text-theme focus:outline-none appearance-none cursor-pointer"
+                    >
+                      {HOSTELS.map((h) => <option key={h} value={h} className="bg-bg text-theme">{h}</option>)}
+                    </select>
+
+                    <select
+                      name="role"
+                      value={formData.role}
+                      onChange={handleChange}
+                      className="w-full bg-transparent border-b-[3px] border-theme py-4 font-bold text-[13px] uppercase text-theme focus:outline-none appearance-none cursor-pointer"
+                    >
+                      <option value="buyer" className="bg-bg text-theme">Buyer</option>
+                      <option value="seller" className="bg-bg text-theme">Seller</option>
+                    </select>
                   </div>
                 </div>
               )}
-              
-              <input key="email-input" name="email" type="email" required onChange={handleChange} value={formData.email}
+
+              <input
+                name="email"
+                type="email"
+                required
+                onChange={handleChange}
+                value={formData.email}
                 className="w-full bg-transparent border-b-[3px] border-theme py-4 font-bold text-[13px] uppercase text-theme focus:outline-none transition-colors placeholder-theme/30"
-                placeholder="Email (@lpu.in)" />
-                
+                placeholder="Email (@lpu.in)"
+              />
+
               {mode !== 'forgot' && (
                 <div className="relative">
-                  <input key="pass-input" name="password" type="password" required onChange={handleChange} value={formData.password}
-                      className="w-full bg-transparent border-b-[3px] border-theme py-4 font-bold text-[13px] uppercase text-theme focus:outline-none transition-colors placeholder-theme/30"
-                      placeholder="Security Key" />
+                  <input
+                    name="password"
+                    type="password"
+                    required
+                    onChange={handleChange}
+                    value={formData.password}
+                    className="w-full bg-transparent border-b-[3px] border-theme py-4 font-bold text-[13px] uppercase text-theme focus:outline-none transition-colors placeholder-theme/30"
+                    placeholder="Security Key"
+                  />
                   {mode === 'login' && (
-                    <button type="button" onClick={() => {setMode('forgot'); setErrorMsg(''); setSuccessMsg('');}} className="absolute right-0 top-4 font-bold text-[11px] uppercase opacity-50 hover:opacity-100 transition-opacity">Forgot?</button>
+                    <button
+                      type="button"
+                      onClick={() => { setMode('forgot'); setErrorMsg(''); setSuccessMsg(''); }}
+                      className="absolute right-0 top-4 font-bold text-[11px] uppercase opacity-50 hover:opacity-100 transition-opacity"
+                    >
+                      Forgot?
+                    </button>
                   )}
                 </div>
               )}
 
               {mode === 'login' && (
                 <label className="flex items-center gap-3 cursor-pointer mt-4 group w-max">
-                  <input type="checkbox" className="w-5 h-5 accent-theme cursor-pointer" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />
-                  <span className="font-bold text-[12px] uppercase opacity-80 group-hover:opacity-100 transition-opacity text-theme">Remember Me</span>
+                  <input
+                    type="checkbox"
+                    className="w-5 h-5 accent-theme cursor-pointer"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                  />
+                  <span className="font-bold text-[12px] uppercase opacity-80 group-hover:opacity-100 transition-opacity text-theme">
+                    Remember Me
+                  </span>
                 </label>
               )}
             </div>
           )}
 
-          <div className="pt-8">
-            <button type="submit" disabled={isLoading}
-              className="w-full py-5 bg-theme text-bg font-black text-[13px] tracking-widest uppercase hover:opacity-80 transition-opacity disabled:opacity-40 border-[3px] border-theme">
-              {isLoading ? 'PROCESSING...' : 
-                mode === 'login' ? 'AUTHENTICATE' : 
-                mode === 'register' ? 'SUBMIT' : 
-                mode === 'forgot' ? 'SEND PIN' :
-                mode === 'reset' ? 'UPDATE KEY' :
-                'VERIFY'}
+          <div className="pt-4">
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full py-5 bg-theme text-bg font-black text-[13px] tracking-widest uppercase hover:opacity-80 transition-opacity disabled:opacity-40 border-[3px] border-theme rounded-full"
+            >
+              {isLoading ? 'Processing...' :
+                mode === 'login' ? 'Authenticate' :
+                mode === 'register' ? 'Submit' :
+                mode === 'forgot' ? 'Send Pin' :
+                mode === 'reset' ? 'Update Key' :
+                'Verify'}
             </button>
           </div>
         </form>
 
         {(mode !== 'verify' && mode !== 'reset') && (
           <div className="mt-8 text-center border-t-[3px] border-theme pt-8">
-            <button onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setErrorMsg(''); setSuccessMsg(''); }} type="button" 
-              className="font-bold text-[12px] uppercase opacity-50 hover:opacity-100 transition-opacity">
-              {mode === 'login' ? 'REQUEST ACCESS' : mode === 'forgot' ? 'RETURN TO LOGIN' : 'ALREADY VERIFIED?'}
+            <button
+              onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setErrorMsg(''); setSuccessMsg(''); }}
+              type="button"
+              className="font-bold text-[12px] uppercase opacity-50 hover:opacity-100 transition-opacity"
+            >
+              {mode === 'login' ? 'Request Access' : mode === 'forgot' ? 'Return to Login' : 'Already Verified?'}
             </button>
           </div>
         )}

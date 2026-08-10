@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const CATEGORIES = ['Books', 'Electronics', 'Apparel', 'Miscellaneous'];
 const HOSTEL_GROUPS = {
   'Boys Hostels': ['BH1', 'BH2', 'BH3', 'BH4', 'BH5', 'BH6', 'BH7', 'BH8', 'BH9', 'BH10'],
-  'Other': ['Boys Studio', 'Day Scholar', 'Staff Residence'],
-  'Girls Hostels': ['GH1', 'GH2', 'GH3', 'GH4', 'GH5', 'GH6'],
+  Other: ['Boys Studio', 'Day Scholar', 'Staff Residence'],
+  'Girls Hostels': ['GH1', 'GH2', 'GH3', 'GH4', 'GH5', 'GH6']
 };
 const ALL_HOSTELS = Object.values(HOSTEL_GROUPS).flat();
 
@@ -15,21 +16,29 @@ const CreatePost = () => {
   const [errorMsg, setErrorMsg] = useState('');
   const [images, setImages] = useState([]);
   const [previews, setPreviews] = useState([]);
-
   const [formData, setFormData] = useState({
-    title: '', description: '', price: '',
-    category: 'Books', condition: 'like_new', campusLocation: 'BH1'
+    title: '',
+    description: '',
+    price: '',
+    category: 'Books',
+    condition: 'like_new',
+    campusLocation: 'BH1'
   });
 
-  const handleChange = e => setFormData({ ...formData, [e.target.name]: e.target.value });
+  useEffect(() => {
+    return () => previews.forEach((preview) => URL.revokeObjectURL(preview));
+  }, [previews]);
 
-  const handleImageChange = e => {
+  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+
+  const handleImageChange = (e) => {
     const files = Array.from(e.target.files || []);
+    previews.forEach((preview) => URL.revokeObjectURL(preview));
     setImages(files);
-    setPreviews(files.map(f => URL.createObjectURL(f)));
+    setPreviews(files.map((file) => URL.createObjectURL(file)));
   };
 
-  const handleSubmit = async e => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     setErrorMsg('');
@@ -43,10 +52,10 @@ const CreatePost = () => {
     try {
       const token = localStorage.getItem('trms_token');
       const payload = new FormData();
-      Object.entries(formData).forEach(([k, v]) => payload.append(k, v));
-      images.forEach(img => payload.append('images', img));
+      Object.entries(formData).forEach(([key, value]) => payload.append(key, value));
+      images.forEach((img) => payload.append('images', img));
 
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/products`, {
+      const res = await fetch(`${API_BASE}/api/products`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: payload
@@ -63,101 +72,116 @@ const CreatePost = () => {
   };
 
   return (
-    <div className="w-full bg-transparent text-theme min-h-screen pt-32 pb-32 px-8 sm:px-14 animate-fade-in transition-colors duration-300 relative z-10">
-      <div className="max-w-3xl mx-auto bg-bg/95 backdrop-blur-xl border border-theme/10 rounded-[3rem] p-10 lg:p-16 shadow-2xl">
-
-        <header className="mb-16 text-center">
+    <div className="w-full min-h-screen pt-32 pb-24 px-4 sm:px-8 text-theme">
+      <div className="max-w-3xl mx-auto bg-bg/90 backdrop-blur-xl border border-theme/10 rounded-[2.5rem] p-6 sm:p-10 lg:p-16 shadow-2xl">
+        <header className="mb-12 text-center">
           <p className="text-[9px] tracking-[0.5em] uppercase text-theme/30 mb-4">Consignment Application</p>
-          <h1 className="text-5xl font-serif font-light text-theme">
+          <h1 className="text-4xl sm:text-5xl font-serif font-light text-theme">
             Add to <em className="not-italic italic opacity-60">Archive</em>.
           </h1>
         </header>
 
         {errorMsg && (
-          <div className="mb-10 p-4 border border-shu_light/30 dark:border-shu_dark/30 text-center">
-            <p className="text-[9px] tracking-[0.3em] uppercase text-shu_light dark:text-shu_dark">{errorMsg}</p>
+          <div className="mb-8 p-4 border border-theme/15 rounded-2xl text-center bg-theme/5">
+            <p className="text-[10px] tracking-[0.3em] uppercase text-theme/80">{errorMsg}</p>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-14">
-
-          {/* Title */}
-          <div className="relative group">
+        <form onSubmit={handleSubmit} className="space-y-10">
+          <div>
             <label className="block mb-3 text-[8px] tracking-[0.4em] uppercase text-theme/30">Designation</label>
             <input
-              type="text" name="title" required onChange={handleChange} value={formData.title}
+              type="text"
+              name="title"
+              required
+              onChange={handleChange}
+              value={formData.title}
               placeholder="Vintage Sony Walkman"
-              className="w-full bg-transparent border-b border-theme/40 focus:border-theme outline-none py-3 text-2xl font-serif text-theme placeholder:text-theme/40 transition-colors"
+              className="w-full bg-transparent border-b border-theme/30 focus:border-theme outline-none py-3 text-2xl font-serif text-theme placeholder:text-theme/40 transition-colors"
             />
           </div>
 
-          {/* Description */}
           <div>
             <label className="block mb-3 text-[8px] tracking-[0.4em] uppercase text-theme/30">Provenance / Details</label>
             <textarea
-              name="description" required rows="3" onChange={handleChange} value={formData.description}
-              placeholder="Describe the item's history, specifications, and any flaws..."
-              className="w-full bg-transparent border-b border-theme/40 focus:border-theme outline-none py-3 text-sm font-sans font-light text-theme placeholder:text-theme/40 resize-none leading-relaxed transition-colors"
+              name="description"
+              required
+              rows="4"
+              onChange={handleChange}
+              value={formData.description}
+              placeholder="Describe the item's history, condition, and any flaws..."
+              className="w-full bg-transparent border-b border-theme/30 focus:border-theme outline-none py-3 text-sm font-sans font-light text-theme placeholder:text-theme/40 resize-none leading-relaxed transition-colors"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-10">
-            {/* Price */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
               <label className="block mb-3 text-[8px] tracking-[0.4em] uppercase text-theme/30">Valuation (₹)</label>
               <input
-                type="number" name="price" required min="0" onChange={handleChange} value={formData.price}
+                type="number"
+                name="price"
+                required
+                min="0"
+                onChange={handleChange}
+                value={formData.price}
                 placeholder="4500"
-                className="w-full bg-transparent border-b border-theme/40 focus:border-theme outline-none py-3 text-2xl font-serif text-theme placeholder:text-theme/40 transition-colors"
+                className="w-full bg-transparent border-b border-theme/30 focus:border-theme outline-none py-3 text-2xl font-serif text-theme placeholder:text-theme/40 transition-colors"
               />
             </div>
 
-            {/* Category */}
             <div>
               <label className="block mb-3 text-[8px] tracking-[0.4em] uppercase text-theme/30">Category</label>
               <select
-                name="category" onChange={handleChange} value={formData.category}
-                className="w-full bg-transparent border-b border-theme/40 focus:border-theme outline-none py-3 text-[9px] tracking-[0.2em] uppercase text-theme cursor-pointer appearance-none transition-colors"
+                name="category"
+                onChange={handleChange}
+                value={formData.category}
+                className="w-full bg-transparent border-b border-theme/30 focus:border-theme outline-none py-3 text-[9px] tracking-[0.2em] uppercase text-theme cursor-pointer appearance-none transition-colors"
               >
-                {CATEGORIES.map(c => <option key={c} value={c} className="bg-cream dark:bg-void">{c}</option>)}
+                {CATEGORIES.map((c) => (
+                  <option key={c} value={c} className="bg-bg text-theme">{c}</option>
+                ))}
               </select>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-10">
-            {/* Condition */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
               <label className="block mb-3 text-[8px] tracking-[0.4em] uppercase text-theme/30">Condition</label>
-              <select 
-                name="condition" onChange={handleChange} value={formData.condition}
-                className="w-full bg-transparent border-b border-theme/40 py-4 text-xs tracking-widest uppercase focus:outline-none focus:border-theme transition-colors cursor-pointer appearance-none text-theme">
-                <option value="new" className="bg-cream dark:bg-void">Brand New</option>
-                <option value="like_new" className="bg-cream dark:bg-void">Like New</option>
-                <option value="good" className="bg-cream dark:bg-void">Good</option>
-                <option value="fair" className="bg-cream dark:bg-void">Fair (Visible Wear)</option>
-                <option value="poor" className="bg-cream dark:bg-void">Heavy Wear</option>
-                <option value="needs_repair" className="bg-cream dark:bg-void">Needs Repair (For Parts)</option>
+              <select
+                name="condition"
+                onChange={handleChange}
+                value={formData.condition}
+                className="w-full bg-transparent border-b border-theme/30 py-4 text-xs tracking-widest uppercase focus:outline-none focus:border-theme transition-colors cursor-pointer appearance-none text-theme"
+              >
+                <option value="new" className="bg-bg text-theme">Brand New</option>
+                <option value="like_new" className="bg-bg text-theme">Like New</option>
+                <option value="good" className="bg-bg text-theme">Good</option>
+                <option value="fair" className="bg-bg text-theme">Fair</option>
+                <option value="poor" className="bg-bg text-theme">Heavy Wear</option>
+                <option value="needs_repair" className="bg-bg text-theme">Needs Repair</option>
               </select>
             </div>
 
-            {/* Location */}
             <div>
               <label className="block mb-3 text-[8px] tracking-[0.4em] uppercase text-theme/30">Your Location</label>
               <select
-                name="campusLocation" onChange={handleChange} value={formData.campusLocation}
-                className="w-full bg-transparent border-b border-theme/40 focus:border-theme outline-none py-3 text-[9px] tracking-[0.2em] uppercase text-theme cursor-pointer appearance-none transition-colors"
+                name="campusLocation"
+                onChange={handleChange}
+                value={formData.campusLocation}
+                className="w-full bg-transparent border-b border-theme/30 focus:border-theme outline-none py-3 text-[9px] tracking-[0.2em] uppercase text-theme cursor-pointer appearance-none transition-colors"
               >
-                {ALL_HOSTELS.map(h => <option key={h} value={h} className="bg-bg text-theme">{h}</option>)}
+                {ALL_HOSTELS.map((h) => (
+                  <option key={h} value={h} className="bg-bg text-theme">{h}</option>
+                ))}
               </select>
             </div>
           </div>
 
-          {/* Image Upload */}
           <div>
             <label className="block mb-3 text-[8px] tracking-[0.4em] uppercase text-theme/30">
-              Editorial Images <span className="text-shu_light dark:text-shu_dark">Min 3 Required</span>
+              Editorial Images <span className="text-theme/50">Min 3 Required</span>
             </label>
-            <label className="border-[2px] border-dashed border-theme/20 flex flex-col items-center justify-center cursor-pointer hover:bg-theme/5 transition-colors group py-16">
+            <label className="border-[2px] border-dashed border-theme/20 flex flex-col items-center justify-center cursor-pointer hover:bg-theme/5 transition-colors group py-16 rounded-[2rem]">
               <div className="text-center">
                 <p className="text-2xl font-serif text-theme/20 mb-2">+</p>
                 <p className="text-[8px] uppercase tracking-widest text-theme/40 group-hover:text-theme transition-colors">
@@ -167,11 +191,10 @@ const CreatePost = () => {
               <input type="file" multiple accept="image/*" onChange={handleImageChange} className="hidden" />
             </label>
 
-            {/* Previews */}
             {previews.length > 0 && (
-              <div className="mt-4 flex gap-3 overflow-x-auto">
+              <div className="mt-4 grid grid-cols-3 sm:grid-cols-6 gap-3">
                 {previews.map((src, i) => (
-                  <div key={i} className="shrink-0 w-20 h-20 bg-theme/5 border border-theme/10 overflow-hidden">
+                  <div key={i} className="aspect-square bg-theme/5 border border-theme/10 overflow-hidden rounded-2xl">
                     <img src={src} alt={`Preview ${i + 1}`} className="w-full h-full object-cover" />
                   </div>
                 ))}
@@ -179,16 +202,15 @@ const CreatePost = () => {
             )}
           </div>
 
-          {/* Submit */}
-          <div className="pt-8 text-center">
+          <div className="pt-4 text-center">
             <button
-              type="submit" disabled={isSubmitting}
-              className="px-16 py-5 bg-theme text-bg text-[9px] tracking-[0.4em] uppercase hover:opacity-80 transition-opacity disabled:opacity-40"
+              type="submit"
+              disabled={isSubmitting}
+              className="px-16 py-5 bg-theme text-bg text-[9px] tracking-[0.4em] uppercase hover:opacity-80 transition-opacity disabled:opacity-40 rounded-full"
             >
-              {isSubmitting ? 'Authenticating…' : 'Submit to Archive'}
+              {isSubmitting ? 'Submitting...' : 'Submit to Archive'}
             </button>
           </div>
-
         </form>
       </div>
     </div>

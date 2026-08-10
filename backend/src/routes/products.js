@@ -186,7 +186,7 @@ router.put('/admin/flag/:id', auth, async (req, res) => {
 /**
  * GET /api/products/:id
  */
-router.get('/:id', auth, async (req, res) => {
+router.get('/:id', async (req, res) => {
    try {
       const product = await Product.findById(req.params.id)
          .populate('seller', ['name', 'trustScore', 'isTrustedSeller', 'averageResponseTimeInMinutes']);

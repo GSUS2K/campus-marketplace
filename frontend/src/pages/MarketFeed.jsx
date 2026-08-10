@@ -1,50 +1,55 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSocket } from '../context/SocketContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import Marquee from '../components/Marquee';
+import { CATEGORIES, HOSTEL_GROUPS } from '../constants';
+import { DEMO_PRODUCTS } from '../data/demoContent';
 
-import { CONDITION_LABELS, CATEGORIES, HOSTEL_GROUPS } from '../constants';
-
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const ALL_HOSTELS = ['All Origins', ...Object.values(HOSTEL_GROUPS).flat()];
 
 const TourOverlay = ({ onComplete }) => {
   const [step, setStep] = useState(0);
   const steps = [
-    { title: "Welcome to The Archive.", text: "A high-fidelity, curated marketplace exclusive to verified campus academics. No outsiders. No noise." },
-    { title: "The TRMS Protocol.", text: "Every artifact and curator is governed by the Trust & Reputation Management System. Authenticity is mathematically enforced." },
-    { title: "Secure Channels.", text: "Engage in end-to-end encrypted dialogue with curators. Your data remains on campus." }
+    { title: 'Welcome to The Archive.', text: 'A curated marketplace for verified campus trading. Fast, direct, and intentional.' },
+    { title: 'The Trust Layer.', text: 'Every listing carries trust signals so buyers can move with more confidence.' },
+    { title: 'Secure Channels.', text: 'Start a private chat with the seller directly from the product page.' }
   ];
 
   useEffect(() => {
-    if (step < 3) {
-      document.body.style.overflow = 'hidden';
-    }
+    document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = 'auto';
     };
-  }, [step]);
+  }, []);
 
   return (
-    <motion.div 
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.8 }}
-      className="fixed top-0 left-0 w-screen h-screen z-[9999] flex items-center justify-center bg-bg/95 backdrop-blur-xl text-theme">
-      <div className="max-w-md text-center px-8">
-        <motion.p key={`phase-${step}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-[9px] tracking-[0.5em] uppercase opacity-40 mb-8">Phase {step + 1} of 3</motion.p>
-        <motion.h2 key={`title-${step}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="text-4xl font-serif font-light mb-6">{steps[step].title}</motion.h2>
-        <motion.p key={`text-${step}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="text-xs uppercase tracking-widest leading-loose opacity-60 mb-12">{steps[step].text}</motion.p>
-        
-        <motion.button 
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.4 }}
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-bg/95 backdrop-blur-xl text-theme px-6"
+    >
+      <div className="max-w-lg text-center">
+        <p className="text-[9px] tracking-[0.5em] uppercase opacity-40 mb-8">Phase {step + 1} of 3</p>
+        <h2 className="text-4xl md:text-5xl font-serif font-light mb-5">{steps[step].title}</h2>
+        <p className="text-xs uppercase tracking-widest leading-loose opacity-60 mb-12">{steps[step].text}</p>
+
+        <button
           onClick={() => {
-            if (step < 2) setStep(step + 1);
-            else onComplete();
+            if (step < steps.length - 1) {
+              setStep(step + 1);
+            } else {
+              onComplete();
+            }
           }}
           className="px-12 py-4 border border-theme text-[9px] tracking-[0.4em] uppercase hover:bg-theme hover:text-bg transition-colors"
         >
-          {step < 2 ? 'Acknowledge' : 'Enter The Archive'}
-        </motion.button>
+          {step < steps.length - 1 ? 'Acknowledge' : 'Enter The Archive'}
+        </button>
       </div>
     </motion.div>
   );
@@ -55,18 +60,20 @@ const MarketFeed = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeLocation, setActiveLocation] = useState('All Origins');
   const [activeCategory, setActiveCategory] = useState('All Archives');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('newest');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [showTour, setShowTour] = useState(false);
   const dropdownRef = useRef(null);
   const { alerts } = useSocket();
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handler = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
         setIsDropdownOpen(false);
       }
     };
+
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
@@ -76,8 +83,7 @@ const MarketFeed = () => {
       setIsLoading(true);
       try {
         const token = localStorage.getItem('trms_token');
-        
-        // Check Tour
+
         if (!localStorage.getItem('archive_tour_seen') && token) {
           setShowTour(true);
         }
@@ -85,17 +91,22 @@ const MarketFeed = () => {
         const params = new URLSearchParams();
         if (activeCategory !== 'All Archives') params.append('category', activeCategory);
         if (activeLocation !== 'All Origins') params.append('location', activeLocation);
-        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/products?${params.toString()}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+
+        const res = await fetch(`${API_BASE}/api/products?${params.toString()}`, {
+          headers: { Authorization: `Bearer ${token}` }
         });
+
         const data = await res.json();
         if (res.ok) setProducts(data);
+        else setProducts(DEMO_PRODUCTS);
       } catch (err) {
         console.error('Failed to fetch feed:', err);
+        setProducts(DEMO_PRODUCTS);
       } finally {
         setIsLoading(false);
       }
     };
+
     fetchProducts();
   }, [activeLocation, activeCategory]);
 
@@ -104,110 +115,161 @@ const MarketFeed = () => {
     setShowTour(false);
   };
 
+  const visibleProducts = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    let next = [...products];
+
+    if (q) {
+      next = next.filter((product) =>
+        [product.title, product.category, product.description, product.campusLocation]
+          .join(' ')
+          .toLowerCase()
+          .includes(q)
+      );
+    }
+
+    next.sort((a, b) => {
+      if (sortBy === 'price-asc') return Number(a.price || 0) - Number(b.price || 0);
+      if (sortBy === 'price-desc') return Number(b.price || 0) - Number(a.price || 0);
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+
+    return next;
+  }, [products, searchQuery, sortBy]);
+
   return (
     <div className="w-full min-h-screen pb-32 transition-colors duration-500 font-sans bg-transparent">
-      
-      {/* ── Marquee ───────────────────────────────────────────────────────────── */}
       <div className="w-full border-b-[3px] border-theme bg-bg/90 backdrop-blur-sm pt-28 pb-2">
-        <Marquee text="THE LPU ARCHIVE — HIGH FIDELITY COMMERCE — VERIFIED CURATORS ONLY — NO OUTSIDERS — " />
+        <Marquee text="THE LPU ARCHIVE - HIGH FIDELITY COMMERCE - VERIFIED CURATORS ONLY - NO OUTSIDERS -" />
       </div>
 
-      {/* ── Hero (Outfit Style) ─────────────────────────────────────────────── */}
       <header className="pt-2 border-b-[3px] border-theme bg-bg/80 backdrop-blur-sm overflow-hidden flex justify-center w-full relative">
         <h1 className="text-[23vw] leading-[0.75] font-black tracking-tight text-theme select-none whitespace-nowrap">
           ARCHIVE.
         </h1>
       </header>
 
-      {/* ── Filter Bar ───────────────────────────────────────── */}
-      <div className="sticky top-[88px] z-40 bg-bg/90 backdrop-blur-md border-b-[3px] border-theme px-8 py-6 flex justify-between items-center transition-colors duration-500">
-        <div className="flex gap-8 overflow-x-auto scrollbar-hide font-bold text-[14px]">
-          {CATEGORIES.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              className={`uppercase whitespace-nowrap transition-colors ${
-                activeCategory === cat ? 'text-theme' : 'text-theme/40 hover:text-theme/70'
-              }`}
+      <div className="sticky top-[88px] z-40 bg-bg/90 backdrop-blur-md border-b-[3px] border-theme px-4 sm:px-8 py-5 transition-colors duration-500">
+        <div className="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between">
+          <div className="flex gap-4 overflow-x-auto scrollbar-hide font-bold text-[14px]">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={`uppercase whitespace-nowrap transition-colors ${
+                  activeCategory === cat ? 'text-theme' : 'text-theme/40 hover:text-theme/70'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search listings"
+              className="w-full sm:w-64 bg-theme/5 border border-theme/10 rounded-full px-5 py-3 text-sm outline-none focus:border-theme/30 transition-colors"
+            />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="bg-theme/5 border border-theme/10 rounded-full px-5 py-3 text-sm outline-none focus:border-theme/30 transition-colors"
             >
-              {cat}
-            </button>
-          ))}
+              <option value="newest">Newest</option>
+              <option value="price-asc">Price: Low to High</option>
+              <option value="price-desc">Price: High to Low</option>
+            </select>
+          </div>
         </div>
 
-        {/* Custom Location Dropdown */}
-        <div className="relative" ref={dropdownRef}>
-          <button 
-            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="flex items-center gap-2 text-[14px] font-bold text-theme uppercase hover:opacity-70 transition-opacity"
-          >
-            <span className="text-theme/40 text-xs">Origin:</span> 
-            {activeLocation}
-            <span className={`text-[10px] transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}>▼</span>
-          </button>
-          
-          <AnimatePresence>
-            {isDropdownOpen && (
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-                className="absolute right-0 top-full mt-4 w-56 max-h-96 overflow-y-auto bg-bg border-[2px] border-theme/20 shadow-2xl z-50 flex flex-col"
-              >
-                {ALL_HOSTELS.map(loc => (
-                  <button
-                    key={loc}
-                    onClick={() => { setActiveLocation(loc); setIsDropdownOpen(false); }}
-                    className={`px-6 py-4 text-left text-xs tracking-widest uppercase transition-colors ${activeLocation === loc ? 'bg-theme text-bg' : 'text-theme hover:bg-theme/5'}`}
-                  >
-                    {loc}
-                  </button>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-5">
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="flex items-center gap-2 text-[14px] font-bold text-theme uppercase hover:opacity-70 transition-opacity"
+            >
+              <span className="text-theme/40 text-xs">Origin:</span>
+              {activeLocation}
+              <span className={`text-[10px] transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}>v</span>
+            </button>
+
+            <AnimatePresence>
+              {isDropdownOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="absolute left-0 sm:left-auto sm:right-0 top-full mt-4 w-56 max-h-96 overflow-y-auto bg-bg border-[2px] border-theme/20 shadow-2xl z-50 flex flex-col rounded-2xl"
+                >
+                  {ALL_HOSTELS.map((loc) => (
+                    <button
+                      key={loc}
+                      onClick={() => {
+                        setActiveLocation(loc);
+                        setIsDropdownOpen(false);
+                      }}
+                      className={`px-6 py-4 text-left text-xs tracking-widest uppercase transition-colors ${
+                        activeLocation === loc ? 'bg-theme text-bg' : 'text-theme hover:bg-theme/5'
+                      }`}
+                    >
+                      {loc}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <div className="text-[9px] tracking-[0.35em] uppercase text-theme/35">
+            {visibleProducts.length} results | {alerts?.length || 0} live signals
+          </div>
         </div>
       </div>
 
-      {/* ── Product Grid ─────────────────────────────────────── */}
       <div className="w-full">
         {isLoading ? (
           <div className="h-96 flex items-center justify-center">
-            <div className="w-12 h-12 border-4 border-theme border-t-transparent rounded-full animate-spin"></div>
+            <div className="w-12 h-12 border-4 border-theme border-t-transparent rounded-full animate-spin" />
           </div>
-        ) : products.length === 0 ? (
-          <div className="h-96 flex flex-col items-center justify-center text-theme">
-             <div className="w-16 h-16 border-2 border-theme rounded-full flex items-center justify-center mb-6">
-                <span className="text-2xl">!</span>
-             </div>
-             <h3 className="text-xl font-bold uppercase mb-2">No Artifacts Found</h3>
-             <p className="text-sm">We couldn't locate any items matching your criteria.</p>
+        ) : visibleProducts.length === 0 ? (
+          <div className="h-96 flex flex-col items-center justify-center text-theme px-8 text-center">
+            <div className="w-16 h-16 border-2 border-theme rounded-full flex items-center justify-center mb-6">
+              <span className="text-2xl">!</span>
+            </div>
+            <h3 className="text-xl font-bold uppercase mb-2">No Artifacts Found</h3>
+            <p className="text-sm text-theme/70 max-w-md">
+              We couldn't locate anything matching your current filters. Try a different keyword or clear the active category.
+            </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 p-8 bg-transparent backdrop-blur-sm">
-            {products.map((product, idx) => (
-              <motion.div 
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 p-4 sm:p-8 bg-transparent backdrop-blur-sm">
+            {visibleProducts.map((product, idx) => (
+              <motion.div
                 key={product._id}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.5, delay: idx * 0.05 }}
                 className="group relative flex flex-col hover:bg-theme/5 rounded-2xl p-2 transition-colors"
               >
-                {/* Massive Image Container */}
                 <div className="aspect-[3/4] w-full overflow-hidden bg-[#e5e5e5] relative border-[3px] border-theme hover:border-accent transition-colors duration-300">
                   <Link to={`/product/${product._id}`}>
-                    <img 
-                      src={product.images[0] || 'https://via.placeholder.com/600'} 
+                    <img
+                      src={product.images?.[0] || 'https://via.placeholder.com/600'}
                       alt={product.title}
                       className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 group-hover:opacity-0 mix-blend-multiply"
                       loading="lazy"
                     />
-                    <img 
-                      src={product.images[1] || product.images[0] || 'https://via.placeholder.com/600'} 
+                    <img
+                      src={product.images?.[1] || product.images?.[0] || 'https://via.placeholder.com/600'}
                       alt={`${product.title} Alternate`}
                       className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 opacity-0 group-hover:opacity-100 group-hover:scale-105 transform mix-blend-multiply"
                       loading="lazy"
                     />
                   </Link>
-                  {/* Verified Badge */}
+
                   {product.isVerifiedProduct && (
                     <div className="absolute top-4 left-4">
                       <span className="text-[10px] font-bold px-2 py-1 bg-theme text-bg uppercase">Verified</span>
@@ -215,15 +277,14 @@ const MarketFeed = () => {
                   )}
                 </div>
 
-                {/* Brutalist Info Bar */}
                 <div className="py-4 flex flex-col justify-start">
                   <div>
                     <h3 className="font-bold text-[16px] leading-tight mb-1 uppercase line-clamp-2">{product.title}</h3>
                     <p className="text-[12px] opacity-60 uppercase">{product.category}</p>
                   </div>
-                  <div className="mt-4 flex justify-between items-center">
-                    <span className="font-bold text-[18px]">₹{product.price.toLocaleString()}</span>
-                    <button 
+                  <div className="mt-4 flex justify-between items-center gap-4">
+                    <span className="font-bold text-[18px]">Rs. {Number(product.price || 0).toLocaleString()}</span>
+                    <button
                       onClick={(e) => {
                         e.preventDefault();
                         const token = localStorage.getItem('trms_token');
@@ -248,6 +309,8 @@ const MarketFeed = () => {
           </div>
         )}
       </div>
+
+      {showTour && <TourOverlay onComplete={completeTour} />}
     </div>
   );
 };

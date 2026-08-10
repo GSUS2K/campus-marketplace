@@ -21,6 +21,7 @@ import logger from './utils/logger.js';
 
 import authRoutes from './routes/auth.js';
 import productRoutes from './routes/products.js';
+import chatRoutes from './routes/chats.js';
 import trustRoutes from './routes/trust.js';
 import analyticsRoutes from './routes/analytics.js';
 
@@ -36,6 +37,8 @@ const io = new Server(server, {
   }
 });
 
+app.set('io', io);
+
 app.use(express.json());
 app.use(cors());
 app.use(helmet({ crossOriginResourcePolicy: false })); // Allow serving images cross-origin
@@ -47,6 +50,7 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 // Mount Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/chats', chatRoutes);
 app.use('/api/trust', trustRoutes);
 app.use('/api/analytics', analyticsRoutes);
 
