@@ -77,7 +77,7 @@ const CreatePost = () => {
         <header className="mb-12 text-center">
           <p className="text-[9px] tracking-[0.5em] uppercase text-theme/30 mb-4">Consignment Application</p>
           <h1 className="text-4xl sm:text-5xl font-serif font-light text-theme">
-            Add to <em className="not-italic italic opacity-60">Archive</em>.
+            Add to <em className="not-italic italic opacity-60">Market</em>.
           </h1>
         </header>
 
@@ -208,7 +208,7 @@ const CreatePost = () => {
               disabled={isSubmitting}
               className="px-16 py-5 bg-theme text-bg text-[9px] tracking-[0.4em] uppercase hover:opacity-80 transition-opacity disabled:opacity-40 rounded-full"
             >
-              {isSubmitting ? 'Submitting...' : 'Submit to Archive'}
+              {isSubmitting ? 'Submitting...' : 'Publish Listing'}
             </button>
           </div>
         </form>

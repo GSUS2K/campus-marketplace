@@ -83,9 +83,9 @@ const Navigation = ({ theme, setTheme }) => {
 
   return (
     <>
-      <nav className="fixed top-6 left-1/2 -translate-x-1/2 w-[95%] max-w-6xl bg-bg/85 backdrop-blur-2xl shadow-2xl text-theme z-50 transition-all duration-500 py-4 px-6 sm:px-8 flex items-center justify-between font-sans rounded-full border border-theme/10 gap-4">
+      <nav className="glass-panel fixed top-6 left-1/2 -translate-x-1/2 w-[95%] max-w-6xl text-theme z-50 transition-all duration-500 py-4 px-6 sm:px-8 flex items-center justify-between font-sans rounded-full gap-4">
         <Link to="/" className="text-xl sm:text-2xl font-serif font-black tracking-tighter flex items-center gap-1 hover:scale-105 transition-transform">
-          <span className="text-theme">LPU Archive.</span>
+          <span className="text-theme">LPU Market.</span>
         </Link>
 
         <div className="flex items-center gap-4 sm:gap-6 text-[13px] sm:text-[15px] font-bold overflow-x-auto">
@@ -97,7 +97,7 @@ const Navigation = ({ theme, setTheme }) => {
                 Bag ({cartItems.length})
               </button>
               {user?.role !== 'buyer' && (
-                <Link to="/post" className="hover:text-theme/70 transition-colors whitespace-nowrap">Add to Archive</Link>
+                <Link to="/post" className="hover:text-theme/70 transition-colors whitespace-nowrap">Add Listing</Link>
               )}
               {user?.role !== 'buyer' && (
                 <Link to="/analytics" className="hover:text-theme/70 transition-colors whitespace-nowrap">Dashboard</Link>
@@ -124,7 +124,7 @@ const Navigation = ({ theme, setTheme }) => {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setIsCartOpen(false)} />
 
-          <div className="relative w-full max-w-2xl bg-bg shadow-2xl rounded-3xl flex flex-col max-h-[85vh] overflow-hidden animate-fade-in border-[2px] border-theme/20">
+          <div className="glass-panel relative w-full max-w-2xl rounded-3xl flex flex-col max-h-[85vh] overflow-hidden animate-fade-in border-[2px] border-theme/20">
             <div className="p-6 sm:p-8 border-b border-theme/20 flex justify-between items-center bg-transparent text-theme">
               <h2 className="text-2xl font-serif font-bold tracking-wide">Your Bag</h2>
               <button onClick={() => setIsCartOpen(false)} className="text-[28px] font-light hover:scale-110 transition-transform opacity-70 hover:opacity-100">&times;</button>
@@ -229,7 +229,7 @@ function App() {
             </main>
 
             <footer className="py-8 border-t-[3px] border-theme mt-20 flex justify-between px-8 text-[12px] font-bold bg-bg/80 backdrop-blur-sm relative z-10">
-              <span>THE LPU ARCHIVE</span>
+              <span>LPU MARKET</span>
               <span>© 2026</span>
             </footer>
           </div>

@@ -71,7 +71,7 @@ const ProductDetail = () => {
           onClick={() => navigate('/')}
           className="text-xs uppercase tracking-widest text-theme/50 hover:text-theme border-b border-theme/20 pb-1 transition-colors"
         >
-          Return to Archive
+          Return to Market
         </button>
       </div>
     );
@@ -152,7 +152,7 @@ const ProductDetail = () => {
             ))}
           </div>
 
-          <div className="border border-theme/15 rounded-[2rem] p-6 bg-bg/85">
+            <div className="glass-panel border-theme/15 rounded-[2rem] p-6">
             <p className="text-[9px] tracking-[0.4em] uppercase text-theme/30 mb-4">Curator Identity</p>
             <p className="text-xl font-serif">{product.seller?.name || 'Anonymous'}</p>
             <div className="flex justify-between mt-3 text-xs uppercase tracking-widest">

@@ -7,7 +7,7 @@ export const CONDITION_LABELS = {
   needs_repair: 'Needs Repair'
 };
 
-export const CATEGORIES = ['All Archives', 'Books', 'Electronics', 'Apparel', 'Miscellaneous'];
+export const CATEGORIES = ['All Listings', 'Books', 'Electronics', 'Apparel', 'Miscellaneous'];
 
 export const HOSTEL_GROUPS = {
   'Boys Hostels': ['BH1', 'BH2', 'BH3', 'BH4', 'BH5', 'BH6', 'BH7', 'BH8', 'BH9', 'BH10'],

@@ -13,7 +13,7 @@ const ALL_HOSTELS = ['All Origins', ...Object.values(HOSTEL_GROUPS).flat()];
 const TourOverlay = ({ onComplete }) => {
   const [step, setStep] = useState(0);
   const steps = [
-    { title: 'Welcome to The Archive.', text: 'A curated marketplace for verified campus trading. Fast, direct, and intentional.' },
+    { title: 'Welcome to LPU Market.', text: 'A curated marketplace for verified campus trading. Fast, direct, and intentional.' },
     { title: 'The Trust Layer.', text: 'Every listing carries trust signals so buyers can move with more confidence.' },
     { title: 'Secure Channels.', text: 'Start a private chat with the seller directly from the product page.' }
   ];
@@ -48,7 +48,7 @@ const TourOverlay = ({ onComplete }) => {
           }}
           className="px-12 py-4 border border-theme text-[9px] tracking-[0.4em] uppercase hover:bg-theme hover:text-bg transition-colors"
         >
-          {step < steps.length - 1 ? 'Acknowledge' : 'Enter The Archive'}
+          {step < steps.length - 1 ? 'Acknowledge' : 'Start Browsing'}
         </button>
       </div>
     </motion.div>
@@ -59,7 +59,7 @@ const MarketFeed = () => {
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeLocation, setActiveLocation] = useState('All Origins');
-  const [activeCategory, setActiveCategory] = useState('All Archives');
+  const [activeCategory, setActiveCategory] = useState('All Listings');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -84,12 +84,12 @@ const MarketFeed = () => {
       try {
         const token = localStorage.getItem('trms_token');
 
-        if (!localStorage.getItem('archive_tour_seen') && token) {
+        if (!localStorage.getItem('market_tour_seen') && token) {
           setShowTour(true);
         }
 
         const params = new URLSearchParams();
-        if (activeCategory !== 'All Archives') params.append('category', activeCategory);
+        if (activeCategory !== 'All Listings') params.append('category', activeCategory);
         if (activeLocation !== 'All Origins') params.append('location', activeLocation);
 
         const res = await fetch(`${API_BASE}/api/products?${params.toString()}`, {
@@ -111,7 +111,7 @@ const MarketFeed = () => {
   }, [activeLocation, activeCategory]);
 
   const completeTour = () => {
-    localStorage.setItem('archive_tour_seen', 'true');
+    localStorage.setItem('market_tour_seen', 'true');
     setShowTour(false);
   };
 
@@ -139,17 +139,17 @@ const MarketFeed = () => {
 
   return (
     <div className="w-full min-h-screen pb-32 transition-colors duration-500 font-sans bg-transparent">
-      <div className="w-full border-b-[3px] border-theme bg-bg/90 backdrop-blur-sm pt-28 pb-2">
-        <Marquee text="THE LPU ARCHIVE - HIGH FIDELITY COMMERCE - VERIFIED CURATORS ONLY - NO OUTSIDERS -" />
+      <div className="w-full border-b border-theme/15 bg-bg/35 backdrop-blur-sm pt-28 pb-2">
+        <Marquee text="LPU MARKET - HIGH FIDELITY CAMPUS COMMERCE - VERIFIED SELLERS - BUY LOCAL -" />
       </div>
 
-      <header className="pt-2 border-b-[3px] border-theme bg-bg/80 backdrop-blur-sm overflow-hidden flex justify-center w-full relative">
-        <h1 className="text-[23vw] leading-[0.75] font-black tracking-tight text-theme select-none whitespace-nowrap">
-          ARCHIVE.
+      <header className="pt-5 pb-3 border-b border-theme/15 bg-bg/25 backdrop-blur-sm overflow-hidden flex justify-center w-full relative">
+        <h1 className="text-[23vw] leading-[0.75] font-black tracking-tight text-theme select-none whitespace-nowrap drop-shadow-[0_18px_28px_rgba(0,0,0,0.08)]">
+          MARKET.
         </h1>
       </header>
 
-      <div className="sticky top-[88px] z-40 bg-bg/90 backdrop-blur-md border-b-[3px] border-theme px-4 sm:px-8 py-5 transition-colors duration-500">
+      <div className="glass-panel sticky top-[88px] z-40 border-x-0 border-t-0 rounded-none px-4 sm:px-8 py-5 transition-colors duration-500">
         <div className="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between">
           <div className="flex gap-4 overflow-x-auto scrollbar-hide font-bold text-[14px]">
             {CATEGORIES.map((cat) => (
@@ -171,12 +171,12 @@ const MarketFeed = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search listings"
-              className="w-full sm:w-64 bg-theme/5 border border-theme/10 rounded-full px-5 py-3 text-sm outline-none focus:border-theme/30 transition-colors"
+              className="glass-control w-full sm:w-64 rounded-full px-5 py-3 text-sm outline-none transition-colors"
             />
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="bg-theme/5 border border-theme/10 rounded-full px-5 py-3 text-sm outline-none focus:border-theme/30 transition-colors"
+              className="glass-control rounded-full px-5 py-3 text-sm outline-none transition-colors"
             >
               <option value="newest">Newest</option>
               <option value="price-asc">Price: Low to High</option>
@@ -202,7 +202,7 @@ const MarketFeed = () => {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
-                  className="absolute left-0 sm:left-auto sm:right-0 top-full mt-4 w-56 max-h-96 overflow-y-auto bg-bg border-[2px] border-theme/20 shadow-2xl z-50 flex flex-col rounded-2xl"
+                  className="glass-panel absolute left-0 sm:left-auto sm:right-0 top-full mt-4 w-56 max-h-96 overflow-y-auto border-[2px] border-theme/20 z-50 flex flex-col rounded-2xl"
                 >
                   {ALL_HOSTELS.map((loc) => (
                     <button
@@ -252,9 +252,9 @@ const MarketFeed = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.5, delay: idx * 0.05 }}
-                className="group relative flex flex-col hover:bg-theme/5 rounded-2xl p-2 transition-colors"
+                className="glass-panel group relative flex flex-col hover:-translate-y-1 rounded-[1.5rem] p-2 transition-all duration-300"
               >
-                <div className="aspect-[3/4] w-full overflow-hidden bg-[#e5e5e5] relative border-[3px] border-theme hover:border-accent transition-colors duration-300">
+                <div className="aspect-[3/4] w-full overflow-hidden bg-theme/5 relative border border-theme/10 hover:border-accent transition-colors duration-300 rounded-[1.15rem]">
                   <Link to={`/product/${product._id}`}>
                     <img
                       src={product.images?.[0] || 'https://via.placeholder.com/600'}

@@ -31,7 +31,7 @@ const Profile = () => {
   }, []);
 
   const handleRemoveListing = async (productId) => {
-    if (!window.confirm('Permanently remove this artifact from the Archive?')) return;
+    if (!window.confirm('Permanently remove this listing from the market?')) return;
 
     try {
       const token = localStorage.getItem('trms_token');
@@ -94,7 +94,7 @@ const Profile = () => {
         </div>
 
         <div>
-          <p className="text-[9px] tracking-[0.4em] uppercase text-theme/30 mb-8">Your Active Archive ({myListings.length})</p>
+          <p className="text-[9px] tracking-[0.4em] uppercase text-theme/30 mb-8">Your Active Listings ({myListings.length})</p>
 
           {isLoading ? (
             <div className="h-48 flex items-center justify-center">
