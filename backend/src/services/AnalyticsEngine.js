@@ -25,8 +25,14 @@ class AnalyticsEngine {
     this.producer = this.kafka.producer();
     this.isConnected = false;
     this.io = null;
-    
-    this.connectProducer();
+    this.connectionPromise = null;
+  }
+
+  start() {
+    if (!this.connectionPromise) {
+      this.connectionPromise = this.connectProducer();
+    }
+    return this.connectionPromise;
   }
 
   async connectProducer() {

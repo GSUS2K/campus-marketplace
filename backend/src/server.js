@@ -6,6 +6,7 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import mongoose from 'mongoose';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,9 +25,6 @@ import productRoutes from './routes/products.js';
 import chatRoutes from './routes/chats.js';
 import trustRoutes from './routes/trust.js';
 import analyticsRoutes from './routes/analytics.js';
-
-// Connect Database
-connectDB();
 
 const app = express();
 const server = http.createServer(app);
@@ -58,7 +56,12 @@ app.use('/api/analytics', analyticsRoutes);
 AnalyticsEngine.attachSocket(io);
 
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Campus Marketplace Backend' });
+  const databaseReady = mongoose.connection.readyState === 1;
+  res.status(200).json({
+    status: databaseReady ? 'OK' : 'DEGRADED',
+    database: databaseReady ? 'connected' : 'disconnected',
+    message: 'Campus Marketplace Backend'
+  });
 });
 
 io.on('connection', (socket) => {
@@ -76,4 +79,7 @@ const PORT = process.env.PORT || 3001;
 
 server.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`);
+  // Start external services after the HTTP port is available to the host.
+  void connectDB();
+  void AnalyticsEngine.start();
 });
