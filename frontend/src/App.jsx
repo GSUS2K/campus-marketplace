@@ -85,7 +85,7 @@ const Navigation = ({ theme, setTheme }) => {
     <>
       <nav className="glass-panel fixed top-6 left-1/2 -translate-x-1/2 w-[95%] max-w-6xl text-theme z-50 transition-all duration-500 py-4 px-6 sm:px-8 flex items-center justify-between font-sans rounded-full gap-4">
         <Link to="/" className="text-xl sm:text-2xl font-serif font-black tracking-tighter flex items-center gap-1 hover:scale-105 transition-transform">
-          <span className="text-theme">LPU Market.</span>
+          <span className="text-theme">LPU Marketplace</span>
         </Link>
 
         <div className="flex items-center gap-4 sm:gap-6 text-[13px] sm:text-[15px] font-bold overflow-x-auto">

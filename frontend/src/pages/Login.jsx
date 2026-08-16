@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { requestJson } from '../lib/api';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const HOSTELS = ['BH1', 'BH2', 'BH3', 'BH4', 'BH5', 'BH6', 'BH7', 'BH8', 'BH9', 'BH10', 'Boys Studio', 'Day Scholar', 'GH1', 'GH2', 'GH3', 'GH4', 'GH5', 'GH6', 'Staff Residence'];
 
 const Login = () => {
@@ -63,13 +63,11 @@ const Login = () => {
     }
 
     try {
-      const res = await fetch(`${API_BASE}${endpoint}`, {
+      const { response: res, data } = await requestJson(endpoint, {
         method: mode === 'reset' ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-
-      const data = await res.json();
 
       if (!res.ok) {
         throw new Error(data.msg || data.errors?.[0]?.msg || 'Authentication failed');
@@ -270,6 +268,9 @@ const Login = () => {
             >
               {mode === 'login' ? 'Request Access' : mode === 'forgot' ? 'Return to Login' : 'Already Verified?'}
             </button>
+            <Link to="/?demo=1" className="block mt-5 text-[10px] tracking-[0.25em] uppercase text-theme/45 hover:text-theme transition-colors">
+              Explore Preview Mode
+            </Link>
           </div>
         )}
       </div>

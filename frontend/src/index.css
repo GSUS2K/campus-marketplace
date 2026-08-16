@@ -110,3 +110,12 @@
   border-color: rgba(var(--accent-color), 0.5);
   background: rgba(var(--glass-tint), 0.34);
 }
+
+.hero-orbit {
+  animation: orbitFloat 10s ease-in-out infinite alternate;
+}
+
+@keyframes orbitFloat {
+  from { transform: translateY(-50%) rotate(-8deg) scale(0.96); }
+  to { transform: translateY(-50%) rotate(8deg) scale(1.04); }
+}

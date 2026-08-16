@@ -4,8 +4,8 @@ import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { CONDITION_LABELS } from '../constants';
 import { DEMO_PRODUCTS } from '../data/demoContent';
+import { requestJson } from '../lib/api';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -17,10 +17,16 @@ const ProductDetail = () => {
 
   useEffect(() => {
     const fetchProduct = async () => {
+      const isDemoMode = new URLSearchParams(window.location.search).get('demo') === '1';
+      if (isDemoMode) {
+        setProduct(DEMO_PRODUCTS.find((item) => item._id === id) || DEMO_PRODUCTS[0]);
+        setIsLoading(false);
+        return;
+      }
       try {
-        const res = await fetch(`${API_BASE}/api/products/${id}`);
+        const { response: res, data } = await requestJson(`/api/products/${id}`);
         if (!res.ok) throw new Error('Artifact not found.');
-        setProduct(await res.json());
+        setProduct(data);
       } catch (_err) {
         setProduct(DEMO_PRODUCTS.find((item) => item._id === id) || DEMO_PRODUCTS[0]);
         setErrorMsg('');

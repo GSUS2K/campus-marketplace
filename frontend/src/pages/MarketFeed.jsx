@@ -6,14 +6,14 @@ import { toast } from 'react-hot-toast';
 import Marquee from '../components/Marquee';
 import { CATEGORIES, HOSTEL_GROUPS } from '../constants';
 import { DEMO_PRODUCTS } from '../data/demoContent';
+import { requestJson } from '../lib/api';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const ALL_HOSTELS = ['All Origins', ...Object.values(HOSTEL_GROUPS).flat()];
 
 const TourOverlay = ({ onComplete }) => {
   const [step, setStep] = useState(0);
   const steps = [
-    { title: 'Welcome to LPU Market.', text: 'A curated marketplace for verified campus trading. Fast, direct, and intentional.' },
+    { title: 'Welcome to the marketplace.', text: 'A curated marketplace for verified campus trading. Fast, direct, and intentional.' },
     { title: 'The Trust Layer.', text: 'Every listing carries trust signals so buyers can move with more confidence.' },
     { title: 'Secure Channels.', text: 'Start a private chat with the seller directly from the product page.' }
   ];
@@ -81,6 +81,12 @@ const MarketFeed = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       setIsLoading(true);
+      const isDemoMode = new URLSearchParams(window.location.search).get('demo') === '1';
+      if (isDemoMode) {
+        setProducts(DEMO_PRODUCTS);
+        setIsLoading(false);
+        return;
+      }
       try {
         const token = localStorage.getItem('trms_token');
 
@@ -92,12 +98,11 @@ const MarketFeed = () => {
         if (activeCategory !== 'All Listings') params.append('category', activeCategory);
         if (activeLocation !== 'All Origins') params.append('location', activeLocation);
 
-        const res = await fetch(`${API_BASE}/api/products?${params.toString()}`, {
+        const { response: res, data } = await requestJson(`/api/products?${params.toString()}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
 
-        const data = await res.json();
-        if (res.ok) setProducts(data);
+        if (res.ok && Array.isArray(data)) setProducts(data);
         else setProducts(DEMO_PRODUCTS);
       } catch (err) {
         console.error('Failed to fetch feed:', err);
@@ -143,10 +148,19 @@ const MarketFeed = () => {
         <Marquee text="LPU MARKET - HIGH FIDELITY CAMPUS COMMERCE - VERIFIED SELLERS - BUY LOCAL -" />
       </div>
 
-      <header className="pt-5 pb-3 border-b border-theme/15 bg-bg/25 backdrop-blur-sm overflow-hidden flex justify-center w-full relative">
-        <h1 className="text-[23vw] leading-[0.75] font-black tracking-tight text-theme select-none whitespace-nowrap drop-shadow-[0_18px_28px_rgba(0,0,0,0.08)]">
-          MARKET.
-        </h1>
+      <header className="relative min-h-[260px] sm:min-h-[330px] overflow-hidden border-b border-theme/15 bg-bg/20 px-6 sm:px-12 flex items-center">
+        <div className="hero-orbit absolute left-[8%] top-1/2 -translate-y-1/2 w-44 h-44 sm:w-64 sm:h-64 rounded-full border border-theme/15" />
+        <div className="hero-orbit absolute left-[14%] top-1/2 -translate-y-1/2 w-28 h-28 sm:w-40 sm:h-40 rounded-full border border-accent/30" />
+        <div className="absolute right-[8%] top-10 w-28 h-28 sm:w-44 sm:h-44 rounded-[2rem] rotate-12 bg-accent/20 blur-[1px]" />
+        <div className="glass-panel relative z-10 ml-auto w-full max-w-xl rounded-[2rem] p-6 sm:p-8">
+          <p className="text-[9px] tracking-[0.45em] uppercase text-theme/45 mb-4">LPU Marketplace / 2026</p>
+          <div className="flex flex-wrap gap-3">
+            {['Buy local', 'Sell simply', 'Meet safely'].map((label) => (
+              <span key={label} className="glass-control rounded-full px-4 py-2 text-[10px] uppercase tracking-[0.2em]">{label}</span>
+            ))}
+          </div>
+          <p className="mt-6 max-w-md text-sm leading-relaxed text-theme/65">Useful things, trusted people, and better deals from around campus.</p>
+        </div>
       </header>
 
       <div className="glass-panel sticky top-[88px] z-40 border-x-0 border-t-0 rounded-none px-4 sm:px-8 py-5 transition-colors duration-500">

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { DEMO_LISTINGS, DEMO_USER } from '../data/demoContent';
+import { API_BASE, requestJson } from '../lib/api';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const Profile = () => {
   const [myListings, setMyListings] = useState([]);
@@ -12,12 +12,18 @@ const Profile = () => {
 
   useEffect(() => {
     const fetchListings = async () => {
+      const isDemoMode = new URLSearchParams(window.location.search).get('demo') === '1';
+      if (isDemoMode) {
+        setMyListings(DEMO_LISTINGS);
+        setIsLoading(false);
+        return;
+      }
       try {
         const token = localStorage.getItem('trms_token');
-        const res = await fetch(`${API_BASE}/api/products/me`, {
+        const { response: res, data } = await requestJson('/api/products/me', {
           headers: { Authorization: `Bearer ${token}` }
         });
-        if (res.ok) setMyListings(await res.json());
+        if (res.ok && Array.isArray(data)) setMyListings(data);
         else setMyListings(DEMO_LISTINGS);
       } catch (err) {
         console.error('Failed to fetch listings', err);
