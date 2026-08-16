@@ -121,8 +121,8 @@ const Login = () => {
         </div>
 
         {errorMsg && (
-          <div className="mb-6 w-full p-4 border-[2px] border-theme text-center bg-bg shadow-lg rounded-2xl">
-            <p className="font-bold text-[11px] uppercase text-theme">{errorMsg}</p>
+          <div className="mb-6 w-full p-4 border border-accent/50 text-center bg-accent/10 rounded-2xl">
+            <p className="font-bold text-[10px] leading-relaxed uppercase text-theme">{errorMsg}</p>
           </div>
         )}
 
@@ -268,7 +268,7 @@ const Login = () => {
             >
               {mode === 'login' ? 'Request Access' : mode === 'forgot' ? 'Return to Login' : 'Already Verified?'}
             </button>
-            <Link to="/?demo=1" className="block mt-5 text-[10px] tracking-[0.25em] uppercase text-theme/45 hover:text-theme transition-colors">
+            <Link to="/?demo=1" className="block mt-5 py-4 rounded-full border border-theme/20 text-[10px] tracking-[0.25em] uppercase text-theme/65 hover:bg-theme hover:text-bg transition-colors">
               Explore Preview Mode
             </Link>
           </div>

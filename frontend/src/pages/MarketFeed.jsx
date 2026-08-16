@@ -145,7 +145,10 @@ const MarketFeed = () => {
   return (
     <div className="w-full min-h-screen pb-32 transition-colors duration-500 font-sans bg-transparent">
       <div className="w-full border-b border-theme/15 bg-bg/35 backdrop-blur-sm pt-28 pb-2">
-        <Marquee text="LPU MARKET - HIGH FIDELITY CAMPUS COMMERCE - VERIFIED SELLERS - BUY LOCAL -" />
+        <Marquee
+          text="LPU MARKET  /  VERIFIED SELLERS  /  BUY LOCAL"
+          className="text-[10px] tracking-[0.25em] text-theme/55"
+        />
       </div>
 
       <header className="relative min-h-[260px] sm:min-h-[330px] overflow-hidden border-b border-theme/15 bg-bg/20 px-6 sm:px-12 flex items-center">
