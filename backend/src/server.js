@@ -30,6 +30,7 @@ import adminRoutes from './routes/admin.js';
 import orderRoutes from './routes/orders.js';
 
 const app = express();
+app.set('trust proxy', 1);
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
@@ -40,8 +41,9 @@ const io = new Server(server, {
 
 app.set('io', io);
 
-app.use(express.json());
-app.use(cors());
+const allowedOrigins = (process.env.CORS_ORIGINS || 'https://lpu-campus-marketplace.netlify.app,http://localhost:5173,http://localhost:4173').split(',').map((origin) => origin.trim()).filter(Boolean);
+app.use(express.json({ limit: '1mb' }));
+app.use(cors({ origin: (origin, callback) => { if (!origin || allowedOrigins.includes(origin)) return callback(null, true); return callback(new Error('Origin not allowed.')); }, credentials: true }));
 app.use(helmet({ crossOriginResourcePolicy: false })); // Allow serving images cross-origin
 app.use(morgan('dev'));
 

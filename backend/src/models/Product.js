@@ -30,7 +30,7 @@ const productSchema = new mongoose.Schema({
   }],
   status: {
     type: String,
-    enum: ['pending_review', 'active', 'sold', 'hidden', 'flagged'],
+    enum: ['pending_review', 'active', 'reserved', 'sold', 'hidden', 'flagged'],
     default: 'pending_review'
   },
   seller: {
@@ -68,7 +68,9 @@ const productSchema = new mongoose.Schema({
     type: Number, 
     default: 0,
     index: true // Indexed to easily query trending/hot products
-  }
+  },
+  reservedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  reservedUntil: { type: Date, default: null }
 }, { timestamps: true });
 
 export default mongoose.model('Product', productSchema);

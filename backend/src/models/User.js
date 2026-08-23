@@ -41,6 +41,27 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
+  phone: {
+    type: String,
+    trim: true,
+    match: /^\+[1-9]\d{7,14}$/
+  },
+  phoneVerified: {
+    type: Boolean,
+    default: false
+  },
+  mobileOtpHash: {
+    type: String,
+    default: null
+  },
+  mobileOtpExpires: {
+    type: Date,
+    default: null
+  },
+  mobileOtpAttempts: {
+    type: Number,
+    default: 0
+  },
   
   // TRMS (Trust and Reputation Management System) Details
   trustScore: {

@@ -5,9 +5,14 @@ import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 import User from '../models/User.js';
 import { body, validationResult } from 'express-validator';
+import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'dissertation_super_secret_key_2026';
+const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
+if (!process.env.JWT_SECRET) console.warn('[Security] JWT_SECRET is not configured; sessions will reset on restart. Set a persistent secret in Render.');
+const LPU_EMAIL = /^[^\s@]+@lpu\.in$/i;
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, standardHeaders: 'draft-8', legacyHeaders: false, message: { msg: 'Too many authentication attempts. Try again later.' } });
+const otpLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 5, standardHeaders: 'draft-8', legacyHeaders: false, message: { msg: 'Too many OTP requests. Try again later.' } });
 
 /**
  * Handle validation errors
@@ -24,7 +29,21 @@ const validate = (req, res, next) => {
  * Generate a randomized 6 digit OTP string
  */
 const generateOTP = () => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return crypto.randomInt(100000, 1000000).toString();
+};
+
+const hashOtp = (otp) => crypto.createHash('sha256').update(otp).digest('hex');
+const normalizeEmail = (email = '') => email.trim().toLowerCase();
+const requireLpuEmail = (value) => LPU_EMAIL.test(normalizeEmail(value));
+
+const sendMobileOTP = async (phone, otp) => {
+  const { TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER } = process.env;
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_FROM_NUMBER) {
+    throw new Error('Mobile verification is not configured. Add Twilio credentials first.');
+  }
+  const body = new URLSearchParams({ To: phone, From: TWILIO_FROM_NUMBER, Body: `Your LPU Marketplace verification code is ${otp}. It expires in 10 minutes.` });
+  const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`, { method: 'POST', headers: { Authorization: `Basic ${Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString('base64')}`, 'Content-Type': 'application/x-www-form-urlencoded' }, body });
+  if (!response.ok) throw new Error('Mobile OTP provider rejected the request.');
 };
 
 /**
@@ -32,6 +51,9 @@ const generateOTP = () => {
  */
 const sendOTP = async (email, otp) => {
   try {
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      throw new Error('Email verification is not configured.');
+    }
     /* 
     // OLD ETHEREAL MOCK CODE (Commented as requested)
     const testAccount = await nodemailer.createTestAccount();
@@ -69,10 +91,8 @@ const sendOTP = async (email, otp) => {
 
     console.log("Real Email dispatched to: %s", email);
   } catch (err) {
-    console.error("Failed to send Actual OTP via Nodemailer. Did you set up the .env?", err);
-    console.log("-----------------------------------------");
-    console.log(`[FALLBACK] OTP for ${email} is: ${otp}`);
-    console.log("-----------------------------------------");
+    console.error("Failed to send OTP:", err.message);
+    throw err;
   }
 };
 
@@ -81,16 +101,17 @@ const sendOTP = async (email, otp) => {
  * POST /api/auth/register
  * Register a new user, issue OTP
  */
-router.post('/register', [
+router.post('/register', authLimiter, [
   body('email').isEmail().withMessage('Valid email required'),
-  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
   body('name').notEmpty().withMessage('Name is required')
 ], validate, async (req, res) => {
   try {
-    const { email, password, name, campusLocation, role } = req.body;
+    const { password, name, campusLocation, role, phone } = req.body;
+    const email = normalizeEmail(req.body.email);
     
     // STRICT ENFORCEMENT: Reject any email that is not @lpu.in
-    if (!email.endsWith('@lpu.in')) {
+    if (!requireLpuEmail(email)) {
       return res.status(400).json({ msg: 'Registration strictly limited to @lpu.in domains.' });
     }
 
@@ -100,6 +121,7 @@ router.post('/register', [
     }
 
     const unHashedOtp = generateOTP();
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) return res.status(503).json({ msg: 'Email verification is not configured yet.' });
 
     if (!user) {
       const salt = await bcrypt.genSalt(10);
@@ -112,19 +134,22 @@ router.post('/register', [
         campusLocation: campusLocation || 'Day Scholar',
         role: ['buyer', 'seller'].includes(role) ? role : 'buyer',
         status: 'pending',
-        otp: unHashedOtp,
+        phone: phone || undefined,
+        phoneVerified: !phone,
+        otp: hashOtp(unHashedOtp),
         otpExpires: Date.now() + 10 * 60 * 1000 // 10 mins
       });
     } else {
       // Allow re-trying OTP if user exists but isn't verified
-      user.otp = unHashedOtp;
+      user.otp = hashOtp(unHashedOtp);
       user.otpExpires = Date.now() + 10 * 60 * 1000;
+      if (phone) user.phone = phone;
     }
 
     await user.save();
     
     // Dispatch Email asynchronously
-    sendOTP(user.email, unHashedOtp);
+    await sendOTP(user.email, unHashedOtp);
 
     res.status(201).json({ msg: 'Registration accepted. OTP Dispatched.', email: user.email });
 
@@ -139,26 +164,34 @@ router.post('/register', [
  * POST /api/auth/verify-otp
  * Verifies OTP and returns secure JWT
  */
-router.post('/verify-otp', [
+router.post('/verify-otp', otpLimiter, [
   body('email').isEmail().withMessage('Valid email required'),
   body('otp').isLength({ min: 6, max: 6 }).withMessage('Valid 6 digit pin required')
 ], validate, async (req, res) => {
   try {
-    const { email, otp } = req.body;
+    const email = normalizeEmail(req.body.email);
+    const { otp } = req.body;
+    if (!requireLpuEmail(email)) return res.status(400).json({ msg: 'Only @lpu.in accounts can be verified.' });
     const user = await User.findOne({ email });
 
     if (!user) return res.status(400).json({ msg: 'User not found' });
     if (user.status === 'verified') return res.status(400).json({ msg: 'Account already verified' });
     
-    if (!user.otp || user.otp !== otp || user.otpExpires < Date.now()) {
+    if (!user.otp || user.otp !== hashOtp(otp) || user.otpExpires < Date.now()) {
       return res.status(400).json({ msg: 'OTP is invalid or has expired.' });
     }
 
     // Pass
-    user.status = 'verified';
+    user.status = user.role === 'seller' ? 'review' : 'verified';
     user.otp = null;
     user.otpExpires = null;
     await user.save();
+
+    if (user.phone && !user.phoneVerified) {
+      return res.json({ requiresMobileVerification: true, email: user.email, phone: user.phone });
+    }
+
+    if (user.role === 'seller') return res.json({ sellerApprovalRequired: true, email: user.email });
 
     const payload = {
       user: {
@@ -202,12 +235,14 @@ router.post('/verify-otp', [
  * POST /api/auth/login
  * Authenticate User & Get Token
  */
-router.post('/login', [
+router.post('/login', authLimiter, [
   body('email').isEmail().withMessage('Valid email required'),
   body('password').exists().withMessage('Password is required')
 ], validate, async (req, res) => {
   try {
-     const { email, password } = req.body;
+     const email = normalizeEmail(req.body.email);
+     const { password } = req.body;
+     if (!requireLpuEmail(email)) return res.status(400).json({ msg: 'Only verified @lpu.in accounts can access the marketplace.' });
      const user = await User.findOne({ email });
      
      if (!user) {
@@ -225,7 +260,14 @@ router.post('/login', [
      
      // Gate: Enforce verified status
      if (user.status === 'pending') {
-        return res.status(403).json({ msg: 'Account requires OTP verification. Check terminal/email.' });
+        return res.status(403).json({ msg: 'Account requires email verification.' });
+     }
+     if (user.role === 'seller' && user.status !== 'verified') {
+        return res.status(403).json({ msg: 'Seller access is awaiting admin approval.', sellerApprovalRequired: true });
+     }
+
+     if (user.phone && !user.phoneVerified) {
+        return res.status(403).json({ msg: 'Mobile verification required.', requiresMobileVerification: true });
      }
 
      const payload = {
@@ -269,22 +311,23 @@ router.post('/login', [
  * POST /api/auth/password/request
  * Send OTP for password reset
  */
-router.post('/password/request', [
+router.post('/password/request', otpLimiter, [
   body('email').isEmail().withMessage('Valid email required')
 ], validate, async (req, res) => {
   try {
-    const { email } = req.body;
+    const email = normalizeEmail(req.body.email);
+    if (!requireLpuEmail(email)) return res.status(400).json({ msg: 'Only @lpu.in accounts can reset access.' });
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({ msg: 'Account not found' });
     }
 
     const unHashedOtp = generateOTP();
-    user.otp = unHashedOtp;
+    user.otp = hashOtp(unHashedOtp);
     user.otpExpires = Date.now() + 10 * 60 * 1000;
     await user.save();
 
-    sendOTP(user.email, unHashedOtp);
+    await sendOTP(user.email, unHashedOtp);
     res.json({ msg: 'Reset PIN dispatched to email.' });
   } catch (err) {
     console.error(err.message);
@@ -296,13 +339,15 @@ router.post('/password/request', [
  * PUT /api/auth/password/reset
  * Verify OTP and set new password
  */
-router.put('/password/reset', [
+router.put('/password/reset', otpLimiter, [
   body('email').isEmail().withMessage('Valid email required'),
   body('otp').isLength({ min: 6, max: 6 }).withMessage('Valid 6 digit pin required'),
-  body('newPassword').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+  body('newPassword').isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
 ], validate, async (req, res) => {
   try {
-    const { email, otp, newPassword } = req.body;
+    const email = normalizeEmail(req.body.email);
+    const { otp, newPassword } = req.body;
+    if (!requireLpuEmail(email)) return res.status(400).json({ msg: 'Only @lpu.in accounts can reset access.' });
     const user = await User.findOne({ email });
 
     if (!user) return res.status(404).json({ msg: 'Account not found' });
@@ -310,7 +355,7 @@ router.put('/password/reset', [
     if (user.status === 'rejected') {
       return res.status(403).json({ msg: 'Account suspended. Contact administrator.' });
     }
-    if (!user.otp || user.otp !== otp || user.otpExpires < Date.now()) {
+    if (!user.otp || user.otp !== hashOtp(otp) || user.otpExpires < Date.now()) {
       return res.status(400).json({ msg: 'Reset PIN is invalid or has expired.' });
     }
 
@@ -325,6 +370,41 @@ router.put('/password/reset', [
     console.error(err.message);
     res.status(500).send('Server Error');
   }
+});
+
+router.post('/mobile/request', otpLimiter, [body('email').isEmail().withMessage('Valid LPU email required')], validate, async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body.email);
+    if (!requireLpuEmail(email)) return res.status(400).json({ msg: 'Only @lpu.in accounts can use mobile verification.' });
+    const user = await User.findOne({ email });
+    if (!user || !user.phone) return res.status(404).json({ msg: 'No mobile number is attached to this account.' });
+    const otp = generateOTP();
+    user.mobileOtpHash = hashOtp(otp);
+    user.mobileOtpExpires = Date.now() + 10 * 60 * 1000;
+    user.mobileOtpAttempts = 0;
+    await user.save();
+    await sendMobileOTP(user.phone, otp);
+    res.json({ msg: 'Mobile verification code sent.' });
+  } catch (err) {
+    console.error('[Auth] mobile OTP request failed:', err.message);
+    res.status(503).json({ msg: err.message });
+  }
+});
+
+router.post('/mobile/verify', otpLimiter, [body('email').isEmail(), body('otp').isLength({ min: 6, max: 6 })], validate, async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body.email);
+    const user = await User.findOne({ email });
+    if (!user || !user.mobileOtpHash || user.mobileOtpExpires < Date.now()) return res.status(400).json({ msg: 'Mobile code is invalid or expired.' });
+    if (user.mobileOtpAttempts >= 5) return res.status(429).json({ msg: 'Too many incorrect mobile codes.' });
+    user.mobileOtpAttempts += 1;
+    if (user.mobileOtpHash !== hashOtp(req.body.otp)) { await user.save(); return res.status(400).json({ msg: 'Mobile code is invalid.' }); }
+    user.phoneVerified = true; user.mobileOtpHash = null; user.mobileOtpExpires = null; user.mobileOtpAttempts = 0; await user.save();
+    if (user.role === 'seller' && user.status !== 'verified') return res.json({ sellerApprovalRequired: true, email: user.email });
+    const payload = { user: { id: user.id, role: user.role, trustScore: user.trustScore, isVerified: true } };
+    const token = jsonwebtoken.sign(payload, JWT_SECRET, { expiresIn: '24h' });
+    res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, campusLocation: user.campusLocation, trustScore: user.trustScore, isTrustedSeller: user.isTrustedSeller, status: user.status } });
+  } catch (err) { console.error('[Auth] mobile OTP verification failed:', err.message); res.status(500).json({ msg: 'Could not verify mobile number.' }); }
 });
 
 export default router;

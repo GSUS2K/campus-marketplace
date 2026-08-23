@@ -17,6 +17,7 @@ const Login = () => {
     name: '',
     campusLocation: 'BH1',
     role: 'buyer',
+    phone: '',
     otp: '',
     newPassword: ''
   });
@@ -39,8 +40,8 @@ const Login = () => {
     setErrorMsg('');
     setSuccessMsg('');
 
-    if (mode === 'register' && !formData.email.endsWith('@lpu.in')) {
-      setErrorMsg('Registration strictly limited to @lpu.in domains.');
+    if ((mode === 'register' || mode === 'login' || mode === 'forgot' || mode === 'reset' || mode === 'verify' || mode === 'mobile-verify') && !/^[^\s@]+@lpu\.in$/i.test(formData.email.trim())) {
+      setErrorMsg('Only @lpu.in accounts are allowed.');
       setIsLoading(false);
       return;
     }
@@ -50,13 +51,16 @@ const Login = () => {
 
     if (mode === 'register') {
       endpoint = '/api/auth/register';
-      payload = { email: formData.email, password: formData.password, name: formData.name, campusLocation: formData.campusLocation, role: formData.role };
+      payload = { email: formData.email, password: formData.password, name: formData.name, campusLocation: formData.campusLocation, role: formData.role, phone: formData.phone || undefined };
     } else if (mode === 'verify') {
       endpoint = '/api/auth/verify-otp';
       payload = { email: formData.email, otp: formData.otp };
     } else if (mode === 'forgot') {
       endpoint = '/api/auth/password/request';
       payload = { email: formData.email };
+    } else if (mode === 'mobile-verify') {
+      endpoint = '/api/auth/mobile/verify';
+      payload = { email: formData.email, otp: formData.otp };
     } else if (mode === 'reset') {
       endpoint = '/api/auth/password/reset';
       payload = { email: formData.email, otp: formData.otp, newPassword: formData.newPassword };
@@ -70,10 +74,26 @@ const Login = () => {
       });
 
       if (!res.ok) {
+        if ((data.requiresMobileVerification || data.sellerApprovalRequired) && mode === 'login') {
+          if (data.sellerApprovalRequired) { setSuccessMsg(data.msg || 'Seller access is waiting for admin approval.'); return; }
+          const mobileRequest = await requestJson('/api/auth/mobile/request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: formData.email }) });
+          if (!mobileRequest.response.ok) throw new Error(mobileRequest.data.msg || 'Could not send mobile verification code.');
+          setMode('mobile-verify');
+          setSuccessMsg('A mobile verification code was sent.');
+          return;
+        }
         throw new Error(data.msg || data.errors?.[0]?.msg || 'Authentication failed');
       }
 
-      if ((mode === 'login' || mode === 'verify') && data.token) {
+      if (mode === 'verify' && data.sellerApprovalRequired) {
+        setMode('login'); setSuccessMsg('Email verified. Your seller access request is waiting for admin approval.');
+      } else if (mode === 'verify' && data.requiresMobileVerification) {
+        const mobileRequest = await requestJson('/api/auth/mobile/request', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: formData.email }) });
+        if (!mobileRequest.response.ok) throw new Error(mobileRequest.data.msg || 'Could not send mobile verification code.');
+        setMode('mobile-verify'); setSuccessMsg('Email verified. A mobile verification code was sent.');
+      } else if (mode === 'mobile-verify' && data.sellerApprovalRequired) {
+        setMode('login'); setSuccessMsg('Mobile verified. Your seller access request is waiting for admin approval.');
+      } else if ((mode === 'login' || mode === 'verify' || mode === 'mobile-verify') && data.token) {
         if (rememberMe) {
           localStorage.setItem('outfit_remembered_email', formData.email);
         } else {
@@ -115,6 +135,7 @@ const Login = () => {
             {mode === 'login' && 'Return to the curation.'}
             {mode === 'register' && 'Exclusive access for academics.'}
             {mode === 'verify' && 'Identity validation.'}
+            {mode === 'mobile-verify' && 'Mobile validation.'}
             {mode === 'forgot' && 'Transmit reset sequence.'}
             {mode === 'reset' && 'Establish new key.'}
           </p>
@@ -133,7 +154,7 @@ const Login = () => {
         )}
 
         <form className="w-full space-y-6" onSubmit={handleAuthSubmit}>
-          {(mode === 'verify' || mode === 'reset') ? (
+          {(mode === 'verify' || mode === 'mobile-verify' || mode === 'reset') ? (
             <div className="space-y-6">
               <input
                 name="otp"
@@ -168,7 +189,17 @@ const Login = () => {
                     onChange={handleChange}
                     value={formData.name}
                     className="w-full bg-transparent border-b-[3px] border-theme py-4 font-bold text-[13px] uppercase text-theme focus:outline-none transition-colors placeholder-theme/30"
-                    placeholder="Full Name"
+                  placeholder="Full Name"
+                  />
+
+                  <input
+                    name="phone"
+                    type="tel"
+                    pattern="\\+[1-9][0-9]{7,14}"
+                    onChange={handleChange}
+                    value={formData.phone}
+                    className="w-full bg-transparent border-b-[3px] border-theme py-4 font-bold text-[13px] uppercase text-theme focus:outline-none transition-colors placeholder-theme/30"
+                    placeholder="Mobile (+91...) · optional"
                   />
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -259,7 +290,7 @@ const Login = () => {
           </div>
         </form>
 
-        {(mode !== 'verify' && mode !== 'reset') && (
+        {(mode !== 'verify' && mode !== 'mobile-verify' && mode !== 'reset') && (
           <div className="mt-8 border-t border-theme/10 pt-6 text-center">
             <button
               onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setErrorMsg(''); setSuccessMsg(''); }}

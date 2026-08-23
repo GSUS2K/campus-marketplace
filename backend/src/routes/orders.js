@@ -20,14 +20,24 @@ router.post('/', auth, async (req, res) => {
 
     const requested = items.map((item) => ({
       id: item.productId || item._id,
-      quantity: Math.max(1, Number(item.quantity || 1))
+      quantity: Math.min(1, Math.max(1, Number(item.quantity || 1)))
     }));
-    const products = await Product.find({ _id: { $in: requested.map((item) => item.id) }, status: 'active' });
+    const products = await Product.find({ _id: { $in: requested.map((item) => item.id) }, status: 'active', isVerifiedProduct: true });
     if (products.length !== requested.length) {
       return res.status(409).json({ msg: 'One or more listings are no longer available.' });
     }
 
     const productById = new Map(products.map((product) => [product.id, product]));
+    const reservedProducts = [];
+    const reservationCutoff = new Date(Date.now() + 30 * 60 * 1000);
+    for (const { id } of requested) {
+      const reserved = await Product.findOneAndUpdate({ _id: id, isVerifiedProduct: true, $or: [{ status: 'active' }, { status: 'reserved', reservedUntil: { $lt: new Date() } }] }, { $set: { status: 'reserved', reservedBy: req.user.id, reservedUntil: reservationCutoff } }, { new: true });
+      if (!reserved) {
+        if (reservedProducts.length) await Product.updateMany({ _id: { $in: reservedProducts }, reservedBy: req.user.id }, { $set: { status: 'active', reservedBy: null, reservedUntil: null } });
+        return res.status(409).json({ msg: 'One or more listings were just reserved by another buyer.' });
+      }
+      reservedProducts.push(reserved._id);
+    }
     const orderItems = requested.map(({ id, quantity }) => {
       const product = productById.get(String(id));
       return {
@@ -40,7 +50,13 @@ router.post('/', auth, async (req, res) => {
       };
     });
     const total = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    const order = await new Order({ buyer: req.user.id, items: orderItems, total, pickupLocation, buyerNote }).save();
+    let order;
+    try {
+      order = await new Order({ buyer: req.user.id, items: orderItems, total, pickupLocation, buyerNote }).save();
+    } catch (error) {
+      await Product.updateMany({ _id: { $in: reservedProducts }, reservedBy: req.user.id }, { $set: { status: 'active', reservedBy: null, reservedUntil: null } });
+      throw error;
+    }
     await User.findByIdAndUpdate(req.user.id, { $inc: { totalTransactions: 1 } });
     res.status(201).json(await populateOrder(Order.findById(order._id)));
   } catch (err) {
@@ -80,6 +96,8 @@ router.put('/:id/status', auth, async (req, res) => {
     if (!canManage) return res.status(403).json({ msg: 'Only a seller or admin can update this order.' });
     order.status = req.body.status;
     await order.save();
+    if (order.status === 'completed') await Product.updateMany({ _id: { $in: order.items.map((item) => item.product) } }, { $set: { status: 'sold', reservedBy: null, reservedUntil: null } });
+    if (order.status === 'cancelled') await Product.updateMany({ _id: { $in: order.items.map((item) => item.product) }, reservedBy: order.buyer }, { $set: { status: 'active', reservedBy: null, reservedUntil: null } });
     res.json(await populateOrder(Order.findById(order._id)));
   } catch (err) {
     console.error(err.message);
@@ -95,6 +113,7 @@ router.put('/:id/cancel', auth, async (req, res) => {
     order.status = 'cancelled';
     order.paymentStatus = 'refunded';
     await order.save();
+    await Product.updateMany({ _id: { $in: order.items.map((item) => item.product) }, reservedBy: order.buyer }, { $set: { status: 'active', reservedBy: null, reservedUntil: null } });
     res.json(await populateOrder(Order.findById(order._id)));
   } catch (err) {
     console.error(err.message);
