@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { PageIntro } from '../components/Ui';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 const CATEGORIES = ['Books', 'Electronics', 'Apparel', 'Miscellaneous'];
@@ -73,13 +74,8 @@ const CreatePost = () => {
 
   return (
     <div className="w-full min-h-screen pt-32 pb-24 px-4 sm:px-8 text-theme">
-      <div className="max-w-3xl mx-auto bg-bg/90 backdrop-blur-xl border border-theme/10 rounded-[2.5rem] p-6 sm:p-10 lg:p-16 shadow-2xl">
-        <header className="mb-12 text-center">
-          <p className="text-[9px] tracking-[0.5em] uppercase text-theme/30 mb-4">Consignment Application</p>
-          <h1 className="text-4xl sm:text-5xl font-serif font-light text-theme">
-            Add to <em className="not-italic italic opacity-60">Market</em>.
-          </h1>
-        </header>
+      <div className="glass-panel mx-auto max-w-4xl rounded-[2rem] p-6 sm:p-10 lg:p-14">
+        <PageIntro eyebrow="Seller workspace" title="Create a listing" description="Give your item a clear story, a fair price, and enough detail for a confident campus pickup." />
 
         {errorMsg && (
           <div className="mb-8 p-4 border border-theme/15 rounded-2xl text-center bg-theme/5">
@@ -87,7 +83,7 @@ const CreatePost = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-10">
+        <form onSubmit={handleSubmit} className="space-y-8">
           <div>
             <label className="block mb-3 text-[8px] tracking-[0.4em] uppercase text-theme/30">Designation</label>
             <input
@@ -181,7 +177,7 @@ const CreatePost = () => {
             <label className="block mb-3 text-[8px] tracking-[0.4em] uppercase text-theme/30">
               Editorial Images <span className="text-theme/50">Min 3 Required</span>
             </label>
-            <label className="border-[2px] border-dashed border-theme/20 flex flex-col items-center justify-center cursor-pointer hover:bg-theme/5 transition-colors group py-16 rounded-[2rem]">
+            <label className="glass-control flex cursor-pointer flex-col items-center justify-center rounded-2xl border-dashed py-16 transition-colors group hover:bg-theme/8">
               <div className="text-center">
                 <p className="text-2xl font-serif text-theme/20 mb-2">+</p>
                 <p className="text-[8px] uppercase tracking-widest text-theme/40 group-hover:text-theme transition-colors">

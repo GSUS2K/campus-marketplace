@@ -5,6 +5,7 @@ import { toast } from 'react-hot-toast';
 import { CONDITION_LABELS } from '../constants';
 import { DEMO_PRODUCTS } from '../data/demoContent';
 import { requestJson } from '../lib/api';
+import { ProductImage, StatusPill } from '../components/Ui';
 
 
 const ProductDetail = () => {
@@ -56,7 +57,8 @@ const ProductDetail = () => {
       return;
     }
 
-    navigate(`/chat?productId=${product._id}&product=${encodeURIComponent(product.title)}`);
+    const demoSuffix = new URLSearchParams(window.location.search).get('demo') === '1' ? '&demo=1' : '';
+    navigate(`/chat?productId=${product._id}&product=${encodeURIComponent(product.title)}${demoSuffix}`);
   };
 
   if (isLoading) {
@@ -98,12 +100,8 @@ const ProductDetail = () => {
           transition={{ duration: 0.8, ease: 'easeOut' }}
           className="space-y-4"
         >
-          <div className="w-full aspect-[4/5] bg-theme/5 overflow-hidden rounded-[2rem] border border-theme/10">
-            <img
-              src={product.images?.[activeImg] || 'https://via.placeholder.com/800x1000?text=No+Image'}
-              alt={product.title}
-              className="w-full h-full object-cover"
-            />
+          <div className="w-full aspect-[4/5] overflow-hidden rounded-[2rem] border border-theme/10">
+            <ProductImage src={product.images?.[activeImg]} alt={product.title} title={product.title} className="h-full w-full" />
           </div>
 
           {imageCount > 1 && (
@@ -130,9 +128,9 @@ const ProductDetail = () => {
           className="flex flex-col gap-8 pt-2"
         >
           <div>
-            <p className="text-[9px] tracking-[0.4em] uppercase text-theme/40 mb-3">{product.category}</p>
-            <h1 className="text-4xl md:text-5xl font-serif font-light leading-tight">{product.title}</h1>
-            <p className="text-3xl font-serif mt-4">Rs. {Number(product.price || 0).toLocaleString()}</p>
+            <div className="mb-3 flex items-center gap-2"><StatusPill tone="neutral">{product.category}</StatusPill>{product.isVerifiedProduct && <StatusPill tone="good">Verified</StatusPill>}</div>
+            <h1 className="text-4xl font-semibold leading-tight tracking-[-0.06em] md:text-5xl">{product.title}</h1>
+            <p className="mt-4 text-3xl font-semibold">Rs. {Number(product.price || 0).toLocaleString()}</p>
           </div>
 
           <div className="border-t border-theme/20 pt-6">

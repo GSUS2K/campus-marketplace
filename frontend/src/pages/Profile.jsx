@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { DEMO_LISTINGS, DEMO_USER } from '../data/demoContent';
 import { API_BASE, requestJson } from '../lib/api';
+import { PageIntro, ProductImage, StatCard, StatusPill } from '../components/Ui';
 
 
 const Profile = () => {
@@ -64,11 +65,16 @@ const Profile = () => {
   return (
     <div className="w-full min-h-screen pt-16 pb-24 px-4 sm:px-8 text-theme">
       <div className="max-w-[1200px] mx-auto">
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-end border-b border-theme pb-12 mb-12 gap-8">
+        <PageIntro eyebrow="Your campus space" title={user.name || 'Your space'} description={`${user.email || 'Demo account'} · ${user.campusLocation || 'Campus'}`} action={<Link to="/post" className="rounded-xl bg-theme px-5 py-3 text-sm font-semibold text-bg">+ New listing</Link>} />
+        <div className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <StatCard label="Trust score" value={`${user.trustScore ?? 0}/100`} note="Your marketplace reputation" />
+          <StatCard label="Active listings" value={myListings.length} note="Items currently visible" />
+          <StatCard label="Identity" value={user.status === 'verified' ? 'Verified' : 'Pending'} note={user.campusLocation || 'Campus member'} />
+        </div>
+        <header className="mb-10 flex flex-col items-start gap-4 border-b border-theme/10 pb-8 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-[9px] tracking-[0.5em] uppercase text-theme/30 mb-4">Curator Journal</p>
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-serif font-light text-theme">{user.name || 'Curator'}</h1>
-            <p className="mt-3 text-[9px] tracking-widest uppercase text-theme/50">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-theme/45">Profile details</p>
+            <p className="mt-3 text-sm text-theme/55">
               {user.email} | {user.campusLocation}
             </p>
           </div>
@@ -93,12 +99,6 @@ const Profile = () => {
           </div>
         </header>
 
-        <div className="flex gap-4 mb-12">
-          <Link to="/post" className="px-6 py-3 bg-theme text-bg text-[9px] tracking-[0.3em] uppercase hover:opacity-80 transition-opacity rounded-full">
-            + Consign Item
-          </Link>
-        </div>
-
         <div>
           <p className="text-[9px] tracking-[0.4em] uppercase text-theme/30 mb-8">Your Active Listings ({myListings.length})</p>
 
@@ -118,21 +118,8 @@ const Profile = () => {
               {myListings.map((product) => (
                 <div key={product._id} className="group flex flex-col">
                   <Link to={`/product/${product._id}`}>
-                    <div className="relative aspect-[3/4] w-full bg-theme/5 overflow-hidden mb-3 rounded-[1.5rem]">
-                      {product.images?.length > 0 ? (
-                        <img
-                          src={product.images[0]}
-                          alt={product.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-[1.5s]"
-                          onError={(e) => {
-                            e.currentTarget.src = 'https://via.placeholder.com/300x400?text=No+Image';
-                          }}
-                        />
-                      ) : (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="text-[8px] tracking-widest uppercase text-theme/20">No Image</span>
-                        </div>
-                      )}
+                    <div className="relative aspect-[3/4] w-full overflow-hidden rounded-[1.5rem]">
+                      <ProductImage src={product.images?.[0]} alt={product.title} title={product.title} className="h-full w-full transition-transform duration-700 group-hover:scale-105" />
                     </div>
                   </Link>
 
@@ -142,7 +129,7 @@ const Profile = () => {
                   </div>
 
                   <div className="flex justify-between items-center mt-1 mb-3">
-                    <p className="text-[8px] tracking-[0.2em] uppercase text-theme/40">{product.status}</p>
+                    <StatusPill tone={product.status === 'active' ? 'good' : 'warn'}>{product.status}</StatusPill>
                     {product.isVerifiedProduct ? (
                       <span className="text-[7px] tracking-[0.2em] uppercase text-theme/60">Authenticated</span>
                     ) : (

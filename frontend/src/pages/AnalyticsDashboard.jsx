@@ -1,21 +1,24 @@
 import React, { useEffect, useState } from 'react';
+import { Activity, ArrowUpRight, Eye, MapPin, RefreshCw, TrendingUp } from 'lucide-react';
 import { DEMO_ANALYTICS } from '../data/demoContent';
+import { requestJson } from '../lib/api';
+import { PageIntro, StatCard, StatusPill } from '../components/Ui';
 
 const AnalyticsDashboard = () => {
   const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLive, setIsLive] = useState(false);
 
   const fetchDemand = async () => {
     try {
       const token = localStorage.getItem('trms_token');
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/analytics/demand`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const json = await res.json();
-      setData(json);
-    } catch (err) {
-      console.error(err);
+      const { response, data: nextData } = await requestJson('/api/analytics/demand', { headers: { Authorization: `Bearer ${token}` } });
+      if (!response.ok) throw new Error('Analytics unavailable');
+      setData(nextData);
+      setIsLive(true);
+    } catch (_error) {
       setData(DEMO_ANALYTICS);
+      setIsLive(false);
     } finally {
       setIsLoading(false);
     }
@@ -23,95 +26,26 @@ const AnalyticsDashboard = () => {
 
   useEffect(() => {
     fetchDemand();
-    const interval = setInterval(fetchDemand, 5000);
+    const interval = setInterval(fetchDemand, 30000);
     return () => clearInterval(interval);
   }, []);
 
-  if (isLoading) {
-    return (
-      <div className="w-full bg-bg min-h-screen pt-32 flex justify-center">
-        <p className="text-[10px] tracking-[0.4em] uppercase text-theme/30 animate-pulse">Initializing Data Stream...</p>
-      </div>
-    );
-  }
+  if (isLoading) return <div className="mx-auto flex min-h-[60vh] max-w-7xl items-center justify-center px-5"><p className="text-sm text-theme/45">Preparing your insights...</p></div>;
 
-  const maxVolume = Math.max(...(data?.trendingCategories?.map(c => c.volume) || [1]));
+  const categories = data?.trendingCategories || [];
+  const locations = data?.surgeLocations || [];
+  const maxVolume = Math.max(...categories.map((item) => item.volume || 0), 1);
+  const totalVolume = categories.reduce((sum, item) => sum + Number(item.volume || 0), 0);
 
-  return (
-    <div className="w-full bg-transparent text-theme min-h-screen pt-32 pb-32 px-8 sm:px-14 animate-fade-in transition-colors duration-300 relative z-10">
-      <div className="max-w-[1200px] mx-auto bg-bg/95 backdrop-blur-xl border border-theme/10 rounded-[3rem] p-10 lg:p-16 shadow-2xl">
-
-        <header className="mb-20 text-center">
-          <div className="flex items-center justify-center gap-2 mb-5">
-            <span className="w-1.5 h-1.5 rounded-full bg-shu_light dark:bg-shu_dark animate-pulse inline-block" />
-            <p className="text-[9px] tracking-[0.5em] uppercase text-shu_light dark:text-shu_dark">Live Kafka Stream</p>
-          </div>
-          <h1 className="text-6xl md:text-8xl font-serif font-light">
-            Market <em className="not-italic italic opacity-50">Intelligence</em>.
-          </h1>
-          <p className="mt-8 text-[9px] tracking-[0.4em] uppercase text-theme/40">
-            Active Network Nodes: <strong className="text-theme font-normal">{data?.activeConnections}</strong>
-          </p>
-        </header>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-10">
-
-          {/* Geographic Surge */}
-          <div className="border border-theme/40 p-8">
-            <h3 className="text-[9px] tracking-[0.4em] uppercase text-theme/30 mb-10 border-b border-theme/40 pb-4">
-              Geographic Demand Surge
-            </h3>
-            <div className="space-y-8">
-              {data?.surgeLocations.map((loc, idx) => (
-                <div key={idx}>
-                  <div className="flex justify-between mb-2 text-xs tracking-widest uppercase">
-                    <span>{loc.name}</span>
-                    <span className="text-theme/40">{loc.demand}%</span>
-                  </div>
-                  <div className="h-[2px] w-full bg-theme/20 overflow-visible relative mt-1">
-                    <div
-                      className="absolute top-0 left-0 h-[4px] bg-theme transition-all duration-1000 -translate-y-[1px]"
-                      style={{ width: `${loc.demand}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Asset Class Velocity */}
-          <div className="border border-theme/40 p-8">
-            <h3 className="text-[9px] tracking-[0.4em] uppercase text-theme/30 mb-10 border-b border-theme/40 pb-4">
-              Asset Class Velocity
-            </h3>
-            <div className="space-y-8">
-              {data?.trendingCategories.map((cat, idx) => (
-                <div key={idx}>
-                  <div className="flex justify-between mb-2 text-xs tracking-widest uppercase">
-                    <span>{cat.name}</span>
-                    <span className="text-theme/40">{cat.volume.toLocaleString()} queries</span>
-                  </div>
-                  <div className="h-[2px] w-full bg-theme/20 overflow-visible relative mt-1">
-                    <div
-                      className="absolute top-0 left-0 h-[4px] bg-theme transition-all duration-1000 -translate-y-[1px]"
-                      style={{ width: `${(cat.volume / maxVolume) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-        </div>
-
-        {/* Refresh indicator */}
-        <p className="text-center text-[8px] tracking-[0.4em] uppercase text-theme/20">
-          Auto-refreshes every 5 seconds
-        </p>
-
-      </div>
+  return <div className="mx-auto min-h-screen max-w-7xl px-5 pb-24 pt-8 sm:px-8">
+    <PageIntro eyebrow="Seller workspace" title="Your insights" description="Understand what people are searching for and where demand is moving." action={<button onClick={fetchDemand} className="flex items-center gap-2 rounded-xl border border-theme/15 px-4 py-3 text-sm font-medium hover:bg-theme/8"><RefreshCw size={15} />Refresh</button>} />
+    <div className="mb-8 flex items-center gap-3"><StatusPill tone={isLive ? 'good' : 'warn'}>{isLive ? 'Live data' : 'Preview data'}</StatusPill><span className="text-xs text-theme/45">Updated just now · auto refreshes every 30 seconds</span></div>
+    <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"><StatCard label="Active connections" value={data?.activeConnections ?? 0} note="People browsing now" icon={<Activity size={18} />} /><StatCard label="Demand volume" value={totalVolume.toLocaleString()} note="Search activity across campus" icon={<TrendingUp size={18} />} /><StatCard label="Top location" value={locations[0]?.name || 'Campus'} note={locations[0] ? `${locations[0].demand}% demand signal` : 'No location signal'} icon={<MapPin size={18} />} /><StatCard label="Conversion focus" value="Trust" note="Verified listings move faster" icon={<Eye size={18} />} /></div>
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+      <section className="glass-panel rounded-3xl p-6 sm:p-8"><div className="mb-8 flex items-start justify-between"><div><p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-theme/45">What is moving</p><h2 className="mt-2 text-2xl font-semibold">Category demand</h2></div><ArrowUpRight className="text-accent" /></div><div className="space-y-6">{categories.map((item) => <div key={item.name}><div className="mb-2 flex items-center justify-between text-sm"><span className="font-medium">{item.name}</span><span className="text-theme/45">{Number(item.volume || 0).toLocaleString()} searches</span></div><div className="h-3 overflow-hidden rounded-full bg-theme/8"><div className="h-full rounded-full bg-accent transition-all" style={{ width: `${Math.max(5, (item.volume / maxVolume) * 100)}%` }} /></div></div>)}</div></section>
+      <section className="glass-panel rounded-3xl p-6 sm:p-8"><p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-theme/45">Where to list</p><h2 className="mt-2 text-2xl font-semibold">Campus hotspots</h2><div className="mt-8 space-y-5">{locations.map((item) => <div key={item.name} className="flex items-center gap-4"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/15 text-accent"><MapPin size={17} /></div><div className="min-w-0 flex-1"><div className="flex justify-between gap-4 text-sm"><span className="truncate font-medium">{item.name}</span><span className="text-theme/45">{item.demand}%</span></div><div className="mt-2 h-2 rounded-full bg-theme/8"><div className="h-full rounded-full bg-theme/55" style={{ width: `${item.demand}%` }} /></div></div></div>)}</div></section>
     </div>
-  );
+  </div>;
 };
 
 export default AnalyticsDashboard;

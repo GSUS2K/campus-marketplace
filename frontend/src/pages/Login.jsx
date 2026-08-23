@@ -101,17 +101,17 @@ const Login = () => {
   };
 
   return (
-    <div className="flex min-h-[80vh] font-sans transition-colors duration-500 flex-col items-center justify-center bg-transparent px-4 py-10">
-      <div className="w-full max-w-[620px] border-[3px] border-theme bg-bg/90 backdrop-blur-md p-6 sm:p-10 lg:p-16 rounded-[2.5rem] shadow-2xl">
+    <div className="flex min-h-[75vh] flex-col items-center justify-center px-4 py-10 font-sans">
+      <div className="glass-panel w-full max-w-[560px] rounded-[2rem] p-6 sm:p-10 lg:p-12">
         <div className="mb-10">
-          <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tighter mb-4 text-theme">
+          <h1 className="mb-3 text-4xl font-semibold tracking-[-0.07em] text-theme md:text-5xl">
             {mode === 'login' && 'ACCESS'}
             {mode === 'register' && 'JOIN'}
             {mode === 'verify' && 'CONFIRM'}
             {mode === 'forgot' && 'RECOVER'}
             {mode === 'reset' && 'RESET'}
           </h1>
-          <p className="font-bold text-[13px] uppercase opacity-70">
+          <p className="text-sm text-theme/55">
             {mode === 'login' && 'Return to the curation.'}
             {mode === 'register' && 'Exclusive access for academics.'}
             {mode === 'verify' && 'Identity validation.'}
@@ -121,13 +121,13 @@ const Login = () => {
         </div>
 
         {errorMsg && (
-          <div className="mb-6 w-full p-4 border border-accent/50 text-center bg-accent/10 rounded-2xl">
+          <div className="mb-6 w-full rounded-2xl border border-accent/50 bg-accent/10 p-4 text-center">
             <p className="font-bold text-[10px] leading-relaxed uppercase text-theme">{errorMsg}</p>
           </div>
         )}
 
         {successMsg && (
-          <div className="mb-6 w-full p-4 border-[2px] border-theme text-center bg-bg shadow-lg rounded-2xl">
+          <div className="mb-6 w-full rounded-2xl border border-theme/15 bg-theme/5 p-4 text-center">
             <p className="font-bold text-[11px] uppercase text-theme">{successMsg}</p>
           </div>
         )}
@@ -247,7 +247,7 @@ const Login = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-5 bg-theme text-bg font-black text-[13px] tracking-widest uppercase hover:opacity-80 transition-opacity disabled:opacity-40 border-[3px] border-theme rounded-full"
+              className="w-full rounded-xl bg-theme py-4 text-sm font-semibold text-bg transition hover:opacity-85 disabled:opacity-40"
             >
               {isLoading ? 'Processing...' :
                 mode === 'login' ? 'Authenticate' :
@@ -260,7 +260,7 @@ const Login = () => {
         </form>
 
         {(mode !== 'verify' && mode !== 'reset') && (
-          <div className="mt-8 text-center border-t-[3px] border-theme pt-8">
+          <div className="mt-8 border-t border-theme/10 pt-6 text-center">
             <button
               onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setErrorMsg(''); setSuccessMsg(''); }}
               type="button"

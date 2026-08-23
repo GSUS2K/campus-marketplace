@@ -7,6 +7,7 @@ import Marquee from '../components/Marquee';
 import { CATEGORIES, HOSTEL_GROUPS } from '../constants';
 import { DEMO_PRODUCTS } from '../data/demoContent';
 import { requestJson } from '../lib/api';
+import { ProductImage, StatusPill } from '../components/Ui';
 
 const ALL_HOSTELS = ['All Origins', ...Object.values(HOSTEL_GROUPS).flat()];
 
@@ -66,6 +67,7 @@ const MarketFeed = () => {
   const [showTour, setShowTour] = useState(false);
   const dropdownRef = useRef(null);
   const { alerts } = useSocket();
+  const demoSuffix = new URLSearchParams(window.location.search).get('demo') === '1' ? '?demo=1' : '';
 
   useEffect(() => {
     const handler = (e) => {
@@ -151,18 +153,17 @@ const MarketFeed = () => {
         />
       </div>
 
-      <header className="relative min-h-[260px] sm:min-h-[330px] overflow-hidden border-b border-theme/15 bg-bg/20 px-6 sm:px-12 flex items-center">
-        <div className="hero-orbit absolute left-[8%] top-1/2 -translate-y-1/2 w-44 h-44 sm:w-64 sm:h-64 rounded-full border border-theme/15" />
-        <div className="hero-orbit absolute left-[14%] top-1/2 -translate-y-1/2 w-28 h-28 sm:w-40 sm:h-40 rounded-full border border-accent/30" />
-        <div className="absolute right-[8%] top-10 w-28 h-28 sm:w-44 sm:h-44 rounded-[2rem] rotate-12 bg-accent/20 blur-[1px]" />
-        <div className="glass-panel relative z-10 ml-auto w-full max-w-xl rounded-[2rem] p-6 sm:p-8">
-          <p className="text-[9px] tracking-[0.45em] uppercase text-theme/45 mb-4">LPU Marketplace / 2026</p>
-          <div className="flex flex-wrap gap-3">
-            {['Buy local', 'Sell simply', 'Meet safely'].map((label) => (
-              <span key={label} className="glass-control rounded-full px-4 py-2 text-[10px] uppercase tracking-[0.2em]">{label}</span>
-            ))}
+      <header className="relative overflow-hidden border-b border-theme/10 bg-bg/15 px-5 py-12 sm:px-10 sm:py-16">
+        <div className="absolute -right-16 -top-24 h-72 w-72 rounded-full bg-accent/20 blur-3xl" />
+        <div className="relative z-10 mx-auto flex max-w-7xl flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl">
+            <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.25em] text-accent">The campus exchange</p>
+            <h1 className="text-4xl font-semibold leading-[0.95] tracking-[-0.07em] sm:text-6xl">Good finds.<br /><span className="text-theme/45">Better nearby.</span></h1>
+            <p className="mt-5 max-w-lg text-sm leading-relaxed text-theme/60">Buy from people around you, sell what you no longer need, and keep campus life moving.</p>
           </div>
-          <p className="mt-6 max-w-md text-sm leading-relaxed text-theme/65">Useful things, trusted people, and better deals from around campus.</p>
+          <div className="grid max-w-md grid-cols-3 gap-2 sm:gap-3">
+            {[['30+', 'live listings'], ['4', 'categories'], ['100%', 'campus first']].map(([value, label]) => <div key={label} className="glass-panel rounded-2xl p-4"><p className="text-xl font-semibold sm:text-2xl">{value}</p><p className="mt-1 text-[9px] uppercase tracking-[0.16em] text-theme/45">{label}</p></div>)}
+          </div>
         </div>
       </header>
 
@@ -262,45 +263,34 @@ const MarketFeed = () => {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 p-4 sm:p-8 bg-transparent backdrop-blur-sm">
+          <div className="mx-auto grid max-w-7xl grid-cols-1 gap-5 px-5 py-8 sm:grid-cols-2 sm:px-8 lg:grid-cols-4">
             {visibleProducts.map((product, idx) => (
               <motion.div
                 key={product._id}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.5, delay: idx * 0.05 }}
-                className="glass-panel group relative flex flex-col hover:-translate-y-1 rounded-[1.5rem] p-2 transition-all duration-300"
+                className="glass-panel group relative flex flex-col rounded-[1.5rem] p-2 transition-all duration-300 hover:-translate-y-1"
               >
-                <div className="aspect-[3/4] w-full overflow-hidden bg-theme/5 relative border border-theme/10 hover:border-accent transition-colors duration-300 rounded-[1.15rem]">
-                  <Link to={`/product/${product._id}`}>
-                    <img
-                      src={product.images?.[0] || 'https://via.placeholder.com/600'}
-                      alt={product.title}
-                      className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 group-hover:opacity-0 mix-blend-multiply"
-                      loading="lazy"
-                    />
-                    <img
-                      src={product.images?.[1] || product.images?.[0] || 'https://via.placeholder.com/600'}
-                      alt={`${product.title} Alternate`}
-                      className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 opacity-0 group-hover:opacity-100 group-hover:scale-105 transform mix-blend-multiply"
-                      loading="lazy"
-                    />
+                <div className="relative aspect-[4/5] w-full overflow-hidden rounded-[1.15rem] border border-theme/10 transition-colors duration-300 hover:border-accent">
+                  <Link to={`/product/${product._id}${demoSuffix}`}>
+                    <ProductImage src={product.images?.[0]} alt={product.title} title={product.title} className="h-full w-full transition duration-500 group-hover:scale-105" />
                   </Link>
 
                   {product.isVerifiedProduct && (
                     <div className="absolute top-4 left-4">
-                      <span className="text-[10px] font-bold px-2 py-1 bg-theme text-bg uppercase">Verified</span>
+                      <StatusPill tone="good">Verified</StatusPill>
                     </div>
                   )}
                 </div>
 
                 <div className="py-4 flex flex-col justify-start">
                   <div>
-                    <h3 className="font-bold text-[16px] leading-tight mb-1 uppercase line-clamp-2">{product.title}</h3>
-                    <p className="text-[12px] opacity-60 uppercase">{product.category}</p>
+                    <h3 className="line-clamp-2 text-[15px] font-semibold leading-tight">{product.title}</h3>
+                    <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-theme/45">{product.category} · {product.campusLocation}</p>
                   </div>
                   <div className="mt-4 flex justify-between items-center gap-4">
-                    <span className="font-bold text-[18px]">Rs. {Number(product.price || 0).toLocaleString()}</span>
+                    <span className="text-lg font-semibold">Rs. {Number(product.price || 0).toLocaleString()}</span>
                     <button
                       onClick={(e) => {
                         e.preventDefault();
