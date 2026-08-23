@@ -19,6 +19,7 @@ import AnalyticsEngine from './services/AnalyticsEngine.js';
 import connectDB from './config/db.js';
 import registerChatHandlers from './socket/chatHandler.js';
 import logger from './utils/logger.js';
+import { seedDemoData } from '../seed.js';
 
 import authRoutes from './routes/auth.js';
 import productRoutes from './routes/products.js';
@@ -82,6 +83,11 @@ const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`);
   // Start external services after the HTTP port is available to the host.
-  void connectDB();
+  void connectDB().then((connected) => {
+    if (connected && process.env.DEMO_SEED === 'true') {
+      return seedDemoData({ force: false });
+    }
+    return null;
+  }).catch((error) => logger.error(`Demo seed failed: ${error.message}`));
   void AnalyticsEngine.start();
 });

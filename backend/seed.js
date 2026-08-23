@@ -56,7 +56,7 @@ const generateDescription = (title) => {
   return `${title}, lightly used and ready for a new campus owner. Clear condition notes, quick campus pickup, and a straightforward handover through LPU Marketplace.`;
 };
 
-const seedDB = async () => {
+export const seedDemoData = async ({ force = true } = {}) => {
   try {
     console.log(`Connecting to: ${dbUri}`);
     await mongoose.connect(dbUri);
@@ -65,6 +65,15 @@ const seedDB = async () => {
     const demoEmails = ['admin@lpu.in', 'seller@lpu.in', 'buyer@lpu.in', 'ganesh.sivah2025@lpu.in'];
     const demoUsers = await User.find({ email: { $in: demoEmails } }).select('_id');
     const demoUserIds = demoUsers.map((user) => user._id);
+    if (!force && demoUsers.length === demoEmails.length) {
+      const demoProductCount = await Product.countDocuments({ seller: { $in: demoUserIds } });
+      const demoBuyer = await User.findOne({ email: 'buyer@lpu.in' }).select('_id');
+      const demoOrderCount = await Order.countDocuments({ buyer: demoBuyer?._id });
+      if (demoProductCount >= 30 && demoOrderCount >= 2) {
+        console.log('Demo data already exists; skipping automatic seed.');
+        return;
+      }
+    }
     await Order.deleteMany({ $or: [{ buyer: { $in: demoUserIds } }, { 'items.seller': { $in: demoUserIds } }] });
     await Product.deleteMany({ seller: { $in: demoUserIds } });
     await User.deleteMany({ _id: { $in: demoUserIds } });
@@ -175,11 +184,13 @@ const seedDB = async () => {
     }
     console.log(`Successfully injected ${products.length} campus listings and 2 demo orders.`);
 
-    process.exit(0);
+    return true;
   } catch (error) {
     console.error('Seeding Error:', error);
-    process.exit(1);
+    throw error;
   }
 };
 
-seedDB();
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+  seedDemoData().then(() => process.exit(0)).catch(() => process.exit(1));
+}
