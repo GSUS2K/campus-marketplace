@@ -2,6 +2,8 @@ import express from 'express';
 import AnalyticsEngine from '../services/AnalyticsEngine.js';
 import Product from '../models/Product.js';
 import EventStream from '../models/EventStream.js';
+import Order from '../models/Order.js';
+import auth from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -37,7 +39,7 @@ router.post('/search', async (req, res) => {
  * GET /api/analytics/demand
  * Fetch aggregated demand data for dashboard
  */
-router.get('/demand', async (req, res) => {
+router.get('/demand', auth, async (req, res) => {
   try {
      // 1. Geographic Demand Surge (Products per location)
      const surgeAggregation = await Product.aggregate([
@@ -67,9 +69,16 @@ router.get('/demand', async (req, res) => {
         { $limit: 3 }
      ]);
 
+     const searchAggregation = await EventStream.aggregate([
+        { $match: { eventType: 'SEARCH', 'metadata.searchTerm': { $exists: true } } },
+        { $group: { _id: '$metadata.searchTerm', volume: { $sum: 1 } } },
+        { $sort: { volume: -1 } },
+        { $limit: 6 }
+     ]);
+
      let trendingCategories = categoryAggregation.map(cat => ({
         name: cat._id,
-        volume: cat.count * 120 // Multiplied by 120 for realistic "velocity/query" metrics demo
+        volume: searchAggregation.find((search) => String(search._id).toLowerCase() === String(cat._id).toLowerCase())?.volume || cat.count
      }));
 
      if (trendingCategories.length === 0) {
@@ -79,8 +88,18 @@ router.get('/demand', async (req, res) => {
      const data = {
         surgeLocations,
         trendingCategories,
-        activeConnections: AnalyticsEngine.getActiveConnections() // Real Socket.IO connection count
+        activeConnections: AnalyticsEngine.getActiveConnections(),
+        totalActiveListings: totalProducts,
+        totalSearches: await EventStream.countDocuments({ eventType: 'SEARCH' }),
+        totalViews: await EventStream.countDocuments({ eventType: 'VIEW' }),
+        scope: req.user.role === 'admin' ? 'marketplace' : 'seller'
      };
+     if (req.user.role !== 'admin') {
+       const sellerProducts = await Product.find({ seller: req.user.id }).select('_id');
+       data.sellerListings = sellerProducts.length;
+       data.sellerViews = await EventStream.countDocuments({ eventType: 'VIEW', targetId: { $in: sellerProducts.map((product) => product._id) } });
+       data.sellerOrders = await Order.countDocuments({ 'items.seller': req.user.id });
+     }
      res.json(data);
   } catch (err) {
      console.error("Analytics Error:", err);

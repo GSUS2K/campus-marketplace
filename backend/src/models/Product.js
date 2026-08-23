@@ -30,8 +30,8 @@ const productSchema = new mongoose.Schema({
   }],
   status: {
     type: String,
-    enum: ['active', 'sold', 'hidden', 'flagged'], // Flagged for anomaly/fraud detection
-    default: 'active'
+    enum: ['pending_review', 'active', 'sold', 'hidden', 'flagged'],
+    default: 'pending_review'
   },
   seller: {
     type: mongoose.Schema.Types.ObjectId,

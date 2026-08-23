@@ -53,7 +53,7 @@ const upload = multer({
 router.get('/', async (req, res) => {
    try {
       const { category, location, limit = 200 } = req.query;
-      let query = { status: 'active' };
+      let query = { status: 'active', isVerifiedProduct: true };
 
       if (category) query.category = category;
       if (location) {
@@ -119,7 +119,7 @@ router.get('/admin/pending', auth, async (req, res) => {
         return res.status(403).json({ msg: 'Access denied. Administrative privileges required.' });
      }
 
-     const products = await Product.find({ isVerifiedProduct: false, status: 'active' })
+     const products = await Product.find({ isVerifiedProduct: false, status: { $in: ['pending_review', 'active'] } })
         .populate('seller', ['name', 'email'])
         .sort({ createdAt: 1 });
 
@@ -152,6 +152,7 @@ router.put('/admin/verify/:id', auth, async (req, res) => {
      if (!product) return res.status(404).json({ msg: 'Product not found' });
 
      product.isVerifiedProduct = true;
+     product.status = 'active';
      await product.save();
 
      res.json({ msg: 'Product successfully verified.', product });
@@ -236,7 +237,8 @@ router.post('/', auth, upload.array('images', 10), async (req, res) => {
          campusLocation,
          images: imagePaths, // Storing physical paths
          riskLevel,
-         seller: req.user.id
+         seller: req.user.id,
+         status: 'pending_review'
       });
 
       const product = await newProduct.save();

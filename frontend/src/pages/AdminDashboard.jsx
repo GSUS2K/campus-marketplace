@@ -1,56 +1,43 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Check, Flag, Search, ShieldCheck } from 'lucide-react';
-import { toast } from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom';
+import { Check, Flag, RefreshCw, Search, ShieldCheck, UserCheck, Users } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { DEMO_PENDING_PRODUCTS } from '../data/demoContent';
 import { requestJson } from '../lib/api';
 import { PageIntro, ProductImage, StatCard, StatusPill } from '../components/Ui';
 
-const AdminDashboard = () => {
-  const [pendingProducts, setPendingProducts] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [isPreview, setIsPreview] = useState(false);
-  const navigate = useNavigate();
+export default function AdminDashboard() {
+  const demo = new URLSearchParams(window.location.search).get('demo') === '1';
   const user = JSON.parse(localStorage.getItem('trms_user') || '{}');
-  const isDemoMode = new URLSearchParams(window.location.search).get('demo') === '1';
+  const [tab, setTab] = useState('listings');
+  const [overview, setOverview] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const token = localStorage.getItem('trms_token');
 
-  const fetchPending = async () => {
-    try {
-      const token = localStorage.getItem('trms_token');
-      const { response, data } = await requestJson('/api/products/admin/pending', { headers: { Authorization: `Bearer ${token}` } });
-      if (!response.ok) throw new Error(data.msg || 'Queue unavailable');
-      setPendingProducts(data);
-      setIsPreview(false);
-    } catch (_error) {
-      setPendingProducts(DEMO_PENDING_PRODUCTS);
-      setIsPreview(true);
-    } finally {
-      setIsLoading(false);
-    }
+  const load = async () => {
+    if (demo && !token) { setOverview({ metrics: { users: 24, sellers: 8, pendingSellers: 2, pendingListings: 1, escalations: 1 }, pendingSellers: [{ _id: 'demo-seller', name: 'Riya Applicant', email: 'riya@lpu.in', campusLocation: 'BH4', status: 'pending', trustScore: 50 }], pendingListings: DEMO_PENDING_PRODUCTS, orders: [{ _id: 'placed', count: 4, value: 7200 }], escalations: [] }); setLoading(false); return; }
+    const { response, data } = await requestJson('/api/admin/overview', { headers: { Authorization: `Bearer ${token}` } });
+    if (!response.ok) toast.error(data.msg || 'Admin workspace unavailable.'); else setOverview(data);
+    setLoading(false);
   };
+  // The queue is intentionally refreshed when the authenticated role or preview mode changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (user.role !== 'admin' && !demo) return; load(); }, [demo, user.role]);
 
-  useEffect(() => { if (user.role !== 'admin' && !isDemoMode) { navigate('/'); return; } fetchPending(); }, [navigate, user.role, isDemoMode]);
-
-  const actOnProduct = async (productId, action) => {
-    try {
-      if (isPreview) { setPendingProducts((items) => items.filter((item) => item._id !== productId)); toast.success(action === 'verify' ? 'Preview listing approved' : 'Preview listing flagged'); return; }
-      const token = localStorage.getItem('trms_token');
-      const { response, data } = await requestJson(`/api/products/admin/${action}/${productId}`, { method: 'PUT', headers: { Authorization: `Bearer ${token}` } });
-      if (!response.ok) throw new Error(data.msg || 'Action failed');
-      setPendingProducts((items) => items.filter((item) => item._id !== productId));
-      toast.success(action === 'verify' ? 'Listing approved' : 'Listing flagged');
-    } catch (error) { toast.error(error.message); }
+  const actOnProduct = async (id, action) => {
+    if (demo && !token) { setOverview((current) => ({ ...current, pendingListings: current.pendingListings.filter((item) => item._id !== id) })); toast.success(`Preview listing ${action === 'verify' ? 'approved' : 'flagged'}.`); return; }
+    const { response, data } = await requestJson(`/api/products/admin/${action}/${id}`, { method: 'PUT', headers: { Authorization: `Bearer ${token}` } });
+    if (!response.ok) { toast.error(data.msg || 'Action failed.'); return; }
+    toast.success(action === 'verify' ? 'Listing approved and published.' : 'Listing flagged and hidden.'); load();
   };
+  const actOnSeller = async (id, status) => {
+    if (demo && !token) { setOverview((current) => ({ ...current, pendingSellers: current.pendingSellers.filter((item) => item._id !== id) })); toast.success(`Preview seller ${status}.`); return; }
+    const { response, data } = await requestJson(`/api/admin/users/${id}/status`, { method: 'PUT', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
+    if (!response.ok) { toast.error(data.msg || 'Could not update seller.'); return; }
+    toast.success(`Seller ${status}.`); load();
+  };
+  const items = useMemo(() => { const source = tab === 'listings' ? overview?.pendingListings : overview?.pendingSellers; return (source || []).filter((item) => `${item.title || item.name} ${item.category || ''} ${item.email || ''} ${item.seller?.name || ''}`.toLowerCase().includes(search.toLowerCase())); }, [overview, search, tab]);
 
-  const filteredProducts = useMemo(() => pendingProducts.filter((item) => `${item.title} ${item.category} ${item.seller?.name || ''}`.toLowerCase().includes(search.toLowerCase())), [pendingProducts, search]);
-
-  return <div className="mx-auto min-h-screen max-w-7xl px-5 pb-24 pt-8 sm:px-8">
-    <PageIntro eyebrow="Trust & safety" title="Review queue" description="Keep the marketplace useful by approving clear, authentic listings and flagging anything that needs a closer look." action={<button onClick={fetchPending} className="rounded-xl border border-theme/15 px-4 py-3 text-sm font-medium hover:bg-theme/8">Refresh queue</button>} />
-    <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3"><StatCard label="Needs review" value={pendingProducts.length} note="Listings waiting for a decision" icon={<ShieldCheck size={18} />} /><StatCard label="High attention" value={pendingProducts.filter((item) => item.riskLevel === 'high').length} note="Prioritize these first" icon={<Flag size={18} />} /><StatCard label="Queue mode" value={isPreview ? 'Preview' : 'Live'} note="Actions are clearly labeled" /></div>
-    <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div className="glass-control flex items-center gap-3 rounded-xl px-4 py-3 sm:w-80"><Search size={16} className="text-theme/40" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search queue" className="w-full bg-transparent text-sm outline-none placeholder:text-theme/40" /></div>{isPreview && <StatusPill tone="warn">Preview data · actions are local</StatusPill>}</div>
-    {isLoading ? <div className="glass-panel rounded-3xl p-16 text-center text-sm text-theme/50">Loading review queue...</div> : filteredProducts.length === 0 ? <div className="glass-panel rounded-3xl p-16 text-center"><ShieldCheck className="mx-auto mb-4 text-emerald-500" /><p className="font-medium">All clear</p><p className="mt-1 text-sm text-theme/50">No listings match this queue.</p></div> : <div className="space-y-4">{filteredProducts.map((product) => <article key={product._id} className="glass-panel grid gap-5 rounded-3xl p-4 sm:p-5 lg:grid-cols-[160px_1fr_auto] lg:items-center"><ProductImage src={product.images?.[0]} alt={product.title} title={product.title} className="h-44 w-full rounded-2xl lg:h-32" /><div><div className="flex flex-wrap items-center gap-2"><StatusPill tone={product.riskLevel === 'high' ? 'danger' : 'neutral'}>{product.riskLevel || 'review'}</StatusPill><span className="text-xs text-theme/45">{product.category} · {product.campusLocation}</span></div><h2 className="mt-3 text-xl font-semibold">{product.title}</h2><p className="mt-2 line-clamp-2 text-sm leading-relaxed text-theme/55">{product.description}</p><p className="mt-3 text-sm font-semibold">Rs. {Number(product.price || 0).toLocaleString()} <span className="font-normal text-theme/45">· {product.seller?.name || 'Unknown seller'}</span></p></div><div className="flex gap-2 lg:flex-col"><button onClick={() => actOnProduct(product._id, 'verify')} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-theme px-4 py-3 text-sm font-semibold text-bg"><Check size={15} />Approve</button><button onClick={() => actOnProduct(product._id, 'flag')} className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-theme/15 px-4 py-3 text-sm font-semibold hover:bg-theme/8"><Flag size={15} />Flag</button></div></article>)}</div>}
-  </div>;
-};
-
-export default AdminDashboard;
+  if (user.role !== 'admin' && !demo) return <section className="page-shell"><div className="glass-panel rounded-3xl p-12 text-center"><ShieldCheck className="mx-auto mb-3 text-theme/35" /><p className="font-semibold">Admin access only</p></div></section>;
+  return <section className="page-shell"><PageIntro eyebrow="Trust & safety" title="Moderation desk" description="Verify seller identity, review listings, and take ownership of escalated conversations. Admins do not sell from this workspace." action={<button onClick={load} className="button-secondary"><RefreshCw size={15} /> Refresh</button>} /><div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><StatCard label="Marketplace users" value={overview?.metrics.users ?? '—'} note="All registered accounts" icon={<Users size={18} />} /><StatCard label="Verified sellers" value={overview?.metrics.sellers ?? '—'} note="Approved seller access" icon={<UserCheck size={18} />} /><StatCard label="Listings to review" value={overview?.metrics.pendingListings ?? '—'} note="Hidden until approved" icon={<ShieldCheck size={18} />} /><StatCard label="Safety escalations" value={overview?.metrics.escalations ?? '—'} note="Chats needing mediation" icon={<Flag size={18} />} /></div><div className="mb-5 flex flex-col gap-3 border-b border-theme/10 pb-4 sm:flex-row sm:items-center sm:justify-between"><div className="flex gap-2 overflow-x-auto"><button onClick={() => setTab('listings')} className={`whitespace-nowrap rounded-xl px-4 py-2 text-sm font-semibold ${tab === 'listings' ? 'bg-theme text-bg' : 'text-theme/50 hover:bg-theme/8'}`}>Listing review ({overview?.metrics.pendingListings ?? 0})</button><button onClick={() => setTab('sellers')} className={`whitespace-nowrap rounded-xl px-4 py-2 text-sm font-semibold ${tab === 'sellers' ? 'bg-theme text-bg' : 'text-theme/50 hover:bg-theme/8'}`}>Seller access ({overview?.metrics.pendingSellers ?? 0})</button><button onClick={() => setTab('escalations')} className={`whitespace-nowrap rounded-xl px-4 py-2 text-sm font-semibold ${tab === 'escalations' ? 'bg-theme text-bg' : 'text-theme/50 hover:bg-theme/8'}`}>Escalations ({overview?.metrics.escalations ?? 0})</button></div><div className="glass-control flex items-center gap-2 rounded-xl px-3 py-2 sm:w-72"><Search size={15} className="text-theme/40" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search this queue" className="w-full bg-transparent text-sm outline-none placeholder:text-theme/40" /></div></div>{loading ? <div className="glass-panel rounded-3xl p-16 text-center text-sm text-theme/50">Loading moderation data...</div> : tab === 'escalations' ? <div className="glass-panel rounded-3xl p-12 text-center"><Flag className="mx-auto mb-3 text-theme/35" /><p className="font-semibold">{overview?.escalations?.length ? `${overview.escalations.length} escalated chat(s)` : 'No active escalations'}</p><p className="mt-1 text-sm text-theme/50">Intermediary assignments will appear here when trust rules require mediation.</p></div> : items.length === 0 ? <div className="glass-panel rounded-3xl p-16 text-center"><Check className="mx-auto mb-3 text-emerald-500" /><p className="font-semibold">Queue clear</p><p className="mt-1 text-sm text-theme/50">Nothing needs your attention in this queue.</p></div> : <div className="space-y-4">{items.map((item) => tab === 'listings' ? <article key={item._id} className="glass-panel grid gap-5 rounded-3xl p-4 sm:p-5 lg:grid-cols-[150px_1fr_auto] lg:items-center"><ProductImage src={item.images?.[0]} alt={item.title} title={item.title} className="h-40 w-full rounded-2xl lg:h-28" /><div><div className="flex flex-wrap items-center gap-2"><StatusPill tone={item.riskLevel === 'high' ? 'danger' : 'warn'}>{item.status === 'pending_review' ? 'Pending review' : item.riskLevel || 'Needs review'}</StatusPill><span className="text-xs text-theme/45">{item.category} · {item.campusLocation}</span></div><h2 className="mt-3 text-xl font-semibold">{item.title}</h2><p className="mt-2 line-clamp-2 text-sm text-theme/55">{item.description}</p><p className="mt-3 text-sm font-semibold">Rs. {Number(item.price || 0).toLocaleString()} <span className="font-normal text-theme/45">· Seller: {item.seller?.name || 'Unknown'}</span></p></div><div className="flex gap-2 lg:flex-col"><button onClick={() => actOnProduct(item._id, 'verify')} className="button-primary justify-center"><Check size={15} /> Approve</button><button onClick={() => actOnProduct(item._id, 'flag')} className="button-secondary justify-center"><Flag size={15} /> Flag</button></div></article> : <article key={item._id} className="glass-panel flex flex-col gap-5 rounded-3xl p-5 sm:flex-row sm:items-center sm:justify-between"><div><div className="flex items-center gap-2"><StatusPill tone="warn">{item.status}</StatusPill><span className="text-xs text-theme/45">{item.campusLocation}</span></div><h2 className="mt-2 text-xl font-semibold">{item.name}</h2><p className="mt-1 text-sm text-theme/50">{item.email}</p><p className="mt-3 text-xs text-theme/45">Trust score: {item.trustScore ?? 50}/100</p></div><div className="flex gap-2"><button onClick={() => actOnSeller(item._id, 'verified')} className="button-primary"><Check size={15} /> Grant access</button><button onClick={() => actOnSeller(item._id, 'rejected')} className="button-secondary"><Flag size={15} /> Reject</button></div></article>)}</div>}</section>;
+}

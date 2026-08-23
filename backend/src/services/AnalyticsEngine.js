@@ -8,7 +8,7 @@ class AnalyticsEngine {
   constructor() {
     const kafkaConfig = {
       clientId: 'campus-marketplace',
-      brokers: [process.env.KAFKA_BROKER || 'localhost:9092']
+      brokers: process.env.KAFKA_BROKER ? [process.env.KAFKA_BROKER] : []
     };
 
     if (process.env.KAFKA_USERNAME && process.env.KAFKA_PASSWORD) {
@@ -20,15 +20,18 @@ class AnalyticsEngine {
       };
     }
 
-    this.kafka = new Kafka(kafkaConfig);
-
-    this.producer = this.kafka.producer();
+    this.kafka = process.env.KAFKA_BROKER ? new Kafka(kafkaConfig) : null;
+    this.producer = this.kafka ? this.kafka.producer() : null;
     this.isConnected = false;
     this.io = null;
     this.connectionPromise = null;
   }
 
   start() {
+    if (!process.env.KAFKA_BROKER) {
+      console.log('[Kafka] Disabled: KAFKA_BROKER is not configured. MongoDB event logging remains active.');
+      return Promise.resolve();
+    }
     if (!this.connectionPromise) {
       this.connectionPromise = this.connectProducer();
     }
@@ -36,6 +39,7 @@ class AnalyticsEngine {
   }
 
   async connectProducer() {
+    if (!this.producer) return;
     try {
       await this.producer.connect();
       this.isConnected = true;

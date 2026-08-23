@@ -57,6 +57,20 @@
   }
 }
 
+.page-shell {
+  width: min(calc(100% - 2rem), 80rem);
+  margin: 0 auto;
+  padding: 2rem 0 6rem;
+}
+
+.eyebrow {
+  color: rgb(var(--text-color) / 0.45);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
 @layer utilities {
   .tracking-outfit {
     letter-spacing: -0.05em;

@@ -63,13 +63,15 @@ export const seedDemoData = async ({ force = true } = {}) => {
     
     // Only replace the demo namespace. Real user listings remain untouched.
     const demoEmails = ['admin@lpu.in', 'seller@lpu.in', 'buyer@lpu.in', 'ganesh.sivah2025@lpu.in'];
-    const demoUsers = await User.find({ email: { $in: demoEmails } }).select('_id');
+    const demoUsers = await User.find({ email: { $in: demoEmails } }).select('_id email');
     const demoUserIds = demoUsers.map((user) => user._id);
     if (!force && demoUsers.length === demoEmails.length) {
       const demoProductCount = await Product.countDocuments({ seller: { $in: demoUserIds } });
+      const demoAdmin = demoUsers.find((user) => user.email === 'admin@lpu.in');
+      const adminProductCount = demoAdmin ? await Product.countDocuments({ seller: demoAdmin._id }) : 0;
       const demoBuyer = await User.findOne({ email: 'buyer@lpu.in' }).select('_id');
       const demoOrderCount = await Order.countDocuments({ buyer: demoBuyer?._id });
-      if (demoProductCount >= 30 && demoOrderCount >= 2) {
+      if (demoProductCount >= 30 && demoOrderCount >= 2 && adminProductCount === 0) {
         console.log('Demo data already exists; skipping automatic seed.');
         return;
       }
@@ -156,9 +158,9 @@ export const seedDemoData = async ({ force = true } = {}) => {
           condition: getRandom(CONDITIONS),
           campusLocation: getRandom(LOCATIONS),
           images: [img1, img2],
-          seller: [sellerUser._id, ganeshUser._id, sellerUser._id, adminUser._id][i % 4],
+          seller: [sellerUser._id, ganeshUser._id][i % 2],
           isVerifiedProduct: isVerified,
-          status: 'active'
+          status: isVerified ? 'active' : 'pending_review'
        });
     }
 

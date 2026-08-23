@@ -26,6 +26,7 @@ import productRoutes from './routes/products.js';
 import chatRoutes from './routes/chats.js';
 import trustRoutes from './routes/trust.js';
 import analyticsRoutes from './routes/analytics.js';
+import adminRoutes from './routes/admin.js';
 import orderRoutes from './routes/orders.js';
 
 const app = express();
@@ -44,6 +45,8 @@ app.use(cors());
 app.use(helmet({ crossOriginResourcePolicy: false })); // Allow serving images cross-origin
 app.use(morgan('dev'));
 
+app.get('/', (_req, res) => res.json({ name: 'Campus Marketplace API', status: 'running', health: '/health' }));
+
 // Serve static uploads
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
@@ -54,6 +57,7 @@ app.use('/api/chats', chatRoutes);
 app.use('/api/trust', trustRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Attach Socket to Analytics Engine
 AnalyticsEngine.attachSocket(io);
