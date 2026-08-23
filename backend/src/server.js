@@ -25,6 +25,7 @@ import productRoutes from './routes/products.js';
 import chatRoutes from './routes/chats.js';
 import trustRoutes from './routes/trust.js';
 import analyticsRoutes from './routes/analytics.js';
+import orderRoutes from './routes/orders.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -51,6 +52,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/chats', chatRoutes);
 app.use('/api/trust', trustRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/orders', orderRoutes);
 
 // Attach Socket to Analytics Engine
 AnalyticsEngine.attachSocket(io);

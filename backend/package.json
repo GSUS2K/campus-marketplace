@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "KAFKAJS_NO_PARTITIONER_WARNING=1 nodemon src/server.js"
+    "dev": "KAFKAJS_NO_PARTITIONER_WARNING=1 nodemon src/server.js",
+    "seed:demo": "node seed.js"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",

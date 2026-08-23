@@ -111,6 +111,23 @@
   background: rgba(var(--glass-tint), 0.34);
 }
 
+.button-secondary,
+.button-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  padding: 0.55rem 0.8rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: opacity 160ms ease, background-color 160ms ease;
+}
+
+.button-secondary { border: 1px solid rgba(var(--glass-tint), 0.2); color: rgb(var(--text-color) / 0.7); }
+.button-secondary:hover { background: rgb(var(--text-color) / 0.08); }
+.button-primary { background: rgb(var(--text-color)); color: rgb(var(--bg-color)); }
+.button-primary:hover { opacity: 0.9; }
+
 .hero-orbit {
   animation: orbitFloat 10s ease-in-out infinite alternate;
 }

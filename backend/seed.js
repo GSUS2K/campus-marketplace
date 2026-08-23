@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import User from './src/models/User.js';
 import Product from './src/models/Product.js';
+import Order from './src/models/Order.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -45,14 +46,14 @@ const CATEGORIES = ["Books", "Electronics", "Apparel", "Miscellaneous"];
 const CONDITIONS = ["new", "like_new", "good", "fair", "poor", "needs_repair"];
 const LOCATIONS = ['BH1', 'BH4', 'BH7', 'Day Scholar', 'GH1', 'Staff Residence'];
 
-const ITEM_PREFIXES = ["Archive", "Edition", "Studio", "Series", "Object"];
+const ITEM_PREFIXES = ["Campus", "Study", "Studio", "Everyday", "Weekend"];
 const ITEM_NOUNS = ["001", "002", "Alpha", "X", "Pro", "Vintage", "Modular"];
 
 const getRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const getRandomPrice = () => Math.floor(Math.random() * 200) * 50 + 1500; // 1500 to 11500
 
 const generateDescription = (title) => {
-  return `Authentic ${title}. Sourced from a verified campus collection. This artifact exhibits exceptional preservation and maintains its original design integrity. Handled with care. Secure transaction guaranteed via TRMS.`;
+  return `${title}, lightly used and ready for a new campus owner. Clear condition notes, quick campus pickup, and a straightforward handover through LPU Marketplace.`;
 };
 
 const seedDB = async () => {
@@ -60,9 +61,13 @@ const seedDB = async () => {
     console.log(`Connecting to: ${dbUri}`);
     await mongoose.connect(dbUri);
     
-    // Clear Existing
-    await User.deleteMany({});
-    await Product.deleteMany({});
+    // Only replace the demo namespace. Real user listings remain untouched.
+    const demoEmails = ['admin@lpu.in', 'seller@lpu.in', 'buyer@lpu.in', 'ganesh.sivah2025@lpu.in'];
+    const demoUsers = await User.find({ email: { $in: demoEmails } }).select('_id');
+    const demoUserIds = demoUsers.map((user) => user._id);
+    await Order.deleteMany({ $or: [{ buyer: { $in: demoUserIds } }, { 'items.seller': { $in: demoUserIds } }] });
+    await Product.deleteMany({ seller: { $in: demoUserIds } });
+    await User.deleteMany({ _id: { $in: demoUserIds } });
     
     const salt = await bcrypt.genSalt(10);
     const defaultPassword = await bcrypt.hash('password123', salt);
@@ -73,7 +78,7 @@ const seedDB = async () => {
     const adminUser = await new User({
        email: 'admin@lpu.in',
        password: defaultPassword,
-       name: 'The Archive Curator',
+       name: 'Maya Admin',
        role: 'admin',
        status: 'verified',
        campusLocation: 'BH1',
@@ -85,7 +90,7 @@ const seedDB = async () => {
     const sellerUser = await new User({
        email: 'seller@lpu.in',
        password: defaultPassword,
-       name: 'Verified Seller',
+       name: 'Aarav Seller',
        role: 'seller',
        status: 'verified',
        campusLocation: 'Day Scholar',
@@ -97,7 +102,7 @@ const seedDB = async () => {
     const buyerUser = await new User({
        email: 'buyer@lpu.in',
        password: defaultPassword,
-       name: 'Standard Buyer',
+       name: 'Diya Buyer',
        role: 'buyer',
        status: 'verified',
        campusLocation: 'GH3',
@@ -110,7 +115,7 @@ const seedDB = async () => {
     const ganeshUser = await new User({
        email: 'ganesh.sivah2025@lpu.in',
        password: defaultPassword,
-       name: 'Ganesh',
+       name: 'Ganesh Sivah',
        role: 'seller', // Making you a seller so you can test consigning
        status: 'verified',
        campusLocation: 'BH1',
@@ -119,17 +124,17 @@ const seedDB = async () => {
        totalTransactions: 10
     }).save();
 
-    console.log("Created accounts: admin@lpu.in, seller@lpu.in, buyer@lpu.in, ganesh.sivah2025@lpu.in (All passwords: password123)");
+    console.log("Created demo accounts: admin@lpu.in, seller@lpu.in, buyer@lpu.in, ganesh.sivah2025@lpu.in (All passwords: password123)");
 
     // 2. Generate 30 Gallery Products
-    console.log("Generating 30 Gallery Artifacts...");
+    console.log("Generating 30 campus listings...");
     const products = [];
     
     // We will ensure a good mix of 30 items
     for (let i = 0; i < 30; i++) {
        const category = CATEGORIES[i % CATEGORIES.length];
        const title = `${getRandom(ITEM_PREFIXES)} ${category === 'Electronics' ? 'Device' : category === 'Books' ? 'Tome' : category === 'Apparel' ? 'Garment' : 'Object'} — ${getRandom(ITEM_NOUNS)}`;
-       const isVerified = Math.random() > 0.1; // 90% verified
+       const isVerified = i % 10 !== 0;
        
        const img1 = getRandom(CATEGORY_IMAGES[category]);
        const img2 = getRandom(CATEGORY_IMAGES[category]);
@@ -142,14 +147,33 @@ const seedDB = async () => {
           condition: getRandom(CONDITIONS),
           campusLocation: getRandom(LOCATIONS),
           images: [img1, img2],
-          seller: Math.random() > 0.33 ? adminUser._id : Math.random() > 0.5 ? sellerUser._id : ganeshUser._id,
+          seller: [sellerUser._id, ganeshUser._id, sellerUser._id, adminUser._id][i % 4],
           isVerifiedProduct: isVerified,
           status: 'active'
        });
     }
 
     await Product.insertMany(products);
-    console.log(`Successfully injected ${products.length} gallery artifacts into The LPU Archive.`);
+    const savedProducts = await Product.find({ seller: { $in: [sellerUser._id, ganeshUser._id] } }).sort({ createdAt: 1 }).limit(3);
+    if (savedProducts.length >= 2) {
+      await new Order({
+        buyer: buyerUser._id,
+        items: [{ product: savedProducts[0]._id, seller: savedProducts[0].seller, title: savedProducts[0].title, image: savedProducts[0].images[0], price: savedProducts[0].price, quantity: 1 }],
+        total: savedProducts[0].price,
+        status: 'confirmed',
+        pickupLocation: 'Main Gate',
+        buyerNote: 'Demo order for testing the buyer flow.'
+      }).save();
+      await new Order({
+        buyer: buyerUser._id,
+        items: [{ product: savedProducts[1]._id, seller: savedProducts[1].seller, title: savedProducts[1].title, image: savedProducts[1].images[0], price: savedProducts[1].price, quantity: 1 }],
+        total: savedProducts[1].price,
+        status: 'placed',
+        pickupLocation: 'BH1 Common Room',
+        buyerNote: 'Second demo order for seller dashboard testing.'
+      }).save();
+    }
+    console.log(`Successfully injected ${products.length} campus listings and 2 demo orders.`);
 
     process.exit(0);
   } catch (error) {

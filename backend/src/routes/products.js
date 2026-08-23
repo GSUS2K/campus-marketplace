@@ -6,10 +6,13 @@ import Product from '../models/Product.js';
 import User from '../models/User.js';
 import AnalyticsEngine from '../services/AnalyticsEngine.js';
 import auth from '../middleware/auth.js';
+import fs from 'fs';
 
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const uploadsDir = path.join(__dirname, '../../uploads/');
+fs.mkdirSync(uploadsDir, { recursive: true });
 
 
 // ---------------------------------------------------------
@@ -18,7 +21,7 @@ const __dirname = path.dirname(__filename);
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     // Absolute path — safe regardless of CWD when Node is invoked
-    cb(null, path.join(__dirname, '../../uploads/'));
+    cb(null, uploadsDir);
   },
   filename: function (req, file, cb) {
     // Generate unique name
@@ -215,7 +218,7 @@ router.post('/', auth, upload.array('images', 10), async (req, res) => {
    try {
       // 1. Mandatory 3 Image Check
       if (!req.files || req.files.length < 3) {
-         return res.status(400).json({ msg: 'A minimum of 3 physical images is mandatory for The LPU Archive.' });
+         return res.status(400).json({ msg: 'Please add at least 3 images so buyers can inspect the listing.' });
       }
 
       const { title, description, price, category, condition, campusLocation } = req.body;
@@ -260,11 +263,11 @@ router.delete('/:id', auth, async (req, res) => {
       // Check user authorization (must be seller or admin)
       const user = await User.findById(req.user.id);
       if (product.seller.toString() !== req.user.id && user.role !== 'admin') {
-         return res.status(401).json({ msg: 'User not authorized to delete this artifact' });
+         return res.status(401).json({ msg: 'You are not authorized to delete this listing.' });
       }
 
       await product.deleteOne();
-      res.json({ msg: 'Artifact removed from the Archive' });
+      res.json({ msg: 'Listing removed.' });
    } catch (err) {
       console.error(err.message);
       if (err.kind === 'ObjectId') return res.status(404).json({ msg: 'Product not found' });
