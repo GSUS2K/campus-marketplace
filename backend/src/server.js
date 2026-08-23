@@ -90,7 +90,7 @@ server.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`);
   // Start external services after the HTTP port is available to the host.
   void connectDB().then((connected) => {
-    if (connected) {
+    if (connected && process.env.DEMO_SEED !== 'false') {
       return seedDemoData({ force: false });
     }
     return null;

@@ -1,6 +1,6 @@
 # Demo Test Data
 
-For Render free instances without Shell access, the server seeds the demo namespace automatically after MongoDB connects. Locally, you can also run `npm run seed:demo` from `backend/` with `MONGO_URI` configured.
+For Render free instances without Shell access, set `DEMO_SEED=true` for one deployment to seed the demo namespace automatically after MongoDB connects, then set it to `false` to stop automatic reseeding. Locally, you can also run `npm run seed:demo` from `backend/` with `MONGO_URI` configured.
 
 The seed refreshes only these demo accounts, their demo listings, and their demo orders. It does not clear real users or real listings.
 
