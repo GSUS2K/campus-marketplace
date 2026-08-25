@@ -64,16 +64,17 @@ const MarketFeed = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isSortOpen, setIsSortOpen] = useState(false);
   const [showTour, setShowTour] = useState(false);
   const dropdownRef = useRef(null);
+  const sortRef = useRef(null);
   const { alerts } = useSocket();
   const demoSuffix = new URLSearchParams(window.location.search).get('demo') === '1' ? '?demo=1' : '';
 
   useEffect(() => {
     const handler = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setIsDropdownOpen(false);
-      }
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setIsDropdownOpen(false);
+      if (sortRef.current && !sortRef.current.contains(e.target)) setIsSortOpen(false);
     };
 
     document.addEventListener('mousedown', handler);
@@ -148,8 +149,8 @@ const MarketFeed = () => {
     <div className="w-full min-h-screen pb-32 transition-colors duration-500 font-sans bg-transparent">
       <div className="w-full border-b border-theme/15 bg-bg/35 backdrop-blur-sm pt-28 pb-2">
         <Marquee
-          text="LPU MARKET  /  VERIFIED SELLERS  /  BUY LOCAL"
-          className="text-[10px] tracking-[0.25em] text-theme/55"
+          text="LPU MARKETPLACE  /  VERIFIED LPU COMMUNITY  /  BUY LOCAL  /  SELL SIMPLY  /  MEET SAFELY  /  CAMPUS-FIRST COMMERCE"
+          className="py-1 text-[10px] font-semibold tracking-[0.24em] text-theme/55"
         />
       </div>
 
@@ -161,8 +162,8 @@ const MarketFeed = () => {
             <h1 className="text-4xl font-semibold leading-[0.95] tracking-[-0.07em] sm:text-6xl">Good finds.<br /><span className="text-theme/45">Better nearby.</span></h1>
             <p className="mt-5 max-w-lg text-sm leading-relaxed text-theme/60">Buy from people around you, sell what you no longer need, and keep campus life moving.</p>
           </div>
-          <div className="grid max-w-md grid-cols-3 gap-2 sm:gap-3">
-            {[['30+', 'live listings'], ['4', 'categories'], ['100%', 'campus first']].map(([value, label]) => <div key={label} className="glass-panel rounded-2xl p-4"><p className="text-xl font-semibold sm:text-2xl">{value}</p><p className="mt-1 text-[9px] uppercase tracking-[0.16em] text-theme/45">{label}</p></div>)}
+            <div className="grid max-w-md grid-cols-3 gap-2 sm:gap-3">
+            {[[isLoading ? '—' : `${products.length}`, 'live listings'], [`${CATEGORIES.length - 1}`, 'categories'], ['100%', 'campus first']].map(([value, label]) => <div key={label} className="glass-panel rounded-2xl p-4"><p className="text-xl font-semibold sm:text-2xl">{value}</p><p className="mt-1 text-[9px] uppercase tracking-[0.16em] text-theme/45">{label}</p></div>)}
           </div>
         </div>
       </header>
@@ -191,15 +192,17 @@ const MarketFeed = () => {
               placeholder="Search listings"
               className="glass-control w-full sm:w-64 rounded-full px-5 py-3 text-sm outline-none transition-colors"
             />
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="glass-control rounded-full px-5 py-3 text-sm outline-none transition-colors"
-            >
-              <option value="newest">Newest</option>
-              <option value="price-asc">Price: Low to High</option>
-              <option value="price-desc">Price: High to Low</option>
-            </select>
+            <div className="relative" ref={sortRef}>
+              <button type="button" onClick={() => setIsSortOpen((open) => !open)} aria-haspopup="listbox" aria-expanded={isSortOpen} className="glass-control flex w-full items-center justify-between gap-8 rounded-full px-5 py-3 text-left text-sm outline-none transition-colors sm:w-56">
+                <span>{sortBy === 'newest' ? 'Newest' : sortBy === 'price-asc' ? 'Price: Low to High' : 'Price: High to Low'}</span>
+                <span className={`text-xs transition-transform ${isSortOpen ? 'rotate-180' : ''}`}>⌄</span>
+              </button>
+              <AnimatePresence>
+                {isSortOpen && <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} className="glass-panel absolute right-0 top-full z-50 mt-2 w-full overflow-hidden rounded-2xl p-1 sm:w-56" role="listbox">
+                  {[['newest', 'Newest'], ['price-asc', 'Price: Low to High'], ['price-desc', 'Price: High to Low']].map(([value, label]) => <button type="button" role="option" aria-selected={sortBy === value} key={value} onClick={() => { setSortBy(value); setIsSortOpen(false); }} className={`w-full rounded-xl px-4 py-3 text-left text-sm transition ${sortBy === value ? 'bg-theme text-bg' : 'text-theme/75 hover:bg-theme/10 hover:text-theme'}`}>{label}</button>)}
+                </motion.div>}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
 
@@ -242,7 +245,7 @@ const MarketFeed = () => {
           </div>
 
           <div className="text-[9px] tracking-[0.35em] uppercase text-theme/35">
-            {visibleProducts.length} results | {alerts?.length || 0} live signals
+            {visibleProducts.length} results <span className="px-1 text-theme/20">|</span> {alerts?.length || 0} live signals
           </div>
         </div>
       </div>

@@ -46,54 +46,71 @@ const sendMobileOTP = async (phone, otp) => {
   if (!response.ok) throw new Error('Mobile OTP provider rejected the request.');
 };
 
-/**
- * Configures NodeMailer for actual Email Delivery
- */
-const sendOTP = async (email, otp) => {
-  try {
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      throw new Error('Email verification is not configured.');
-    }
-    /* 
-    // OLD ETHEREAL MOCK CODE (Commented as requested)
-    const testAccount = await nodemailer.createTestAccount();
-    const transporter = nodemailer.createTransport({
-      host: testAccount.smtp.host,
-      port: testAccount.smtp.port,
-      secure: testAccount.smtp.secure,
-      auth: { user: testAccount.user, pass: testAccount.pass },
-    });
-    */
+const otpEmail = (email, otp) => ({
+  to: email,
+  subject: 'Verification PIN - Campus Marketplace',
+  text: `Your One-Time Password for Campus Marketplace is: ${otp}. It will expire in 10 minutes.`,
+  html: `
+    <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; text-align: center; border: 1px solid #eee;">
+      <h2 style="color: #1C1C1C; font-weight: 300; letter-spacing: 2px;">IDENTITY CONFIRMATION</h2>
+      <p style="color: #666; font-size: 12px; letter-spacing: 1px; text-transform: uppercase;">Your secure Marketplace PIN is:</p>
+      <h1 style="color: #C82A2A; font-size: 32px; letter-spacing: 8px;">${otp}</h1>
+      <p style="color: #999; font-size: 10px;">Expires in 10 minutes. Do not share this code.</p>
+    </div>
+  `,
+});
 
-    // NEW PRODUCTION GMAIL SMTP CODE
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER, // e.g. your_throwaway@gmail.com
-        pass: process.env.EMAIL_PASS, // 16-character Google App Password
+const sendWithResend = async (email, otp) => {
+    const from = process.env.RESEND_FROM_EMAIL || 'Campus Marketplace <onboarding@resend.dev>';
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        from,
+        ...otpEmail(email, otp),
+      }),
     });
+    if (!response.ok) {
+      const details = await response.text();
+      throw new Error(`Resend rejected the email (${response.status}): ${details.slice(0, 300)}`);
+    }
+    console.log('Verification email dispatched through Resend.');
+};
 
-    const info = await transporter.sendMail({
-      from: `"Campus Market TRMS" <${process.env.EMAIL_USER}>`,
-      to: email, // Sending to the actual LPU email
-      subject: "Verification PIN - Campus Marketplace",
-      text: `Your One-Time Password for Market Access is: ${otp}. It will expire in 10 minutes.`,
-      html: `
-        <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; text-align: center; border: 1px solid #eee;">
-          <h2 style="color: #1C1C1C; font-weight: 300; letter-spacing: 2px;">IDENTITY CONFIRMATION</h2>
-          <p style="color: #666; font-size: 12px; letter-spacing: 1px; text-transform: uppercase;">Your secure Market PIN is:</p>
-          <h1 style="color: #C82A2A; font-size: 32px; letter-spacing: 8px;">${otp}</h1>
-          <p style="color: #999; font-size: 10px;">Expires in 10 minutes. Do not share this code.</p>
-        </div>
-      `,
-    });
+const sendWithGmail = async (email, otp) => {
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+  });
+  await transporter.sendMail({
+    from: `Campus Marketplace <${process.env.EMAIL_USER}>`,
+    ...otpEmail(email, otp),
+  });
+  console.log('Verification email dispatched through Gmail fallback.');
+};
 
-    console.log("Real Email dispatched to: %s", email);
-  } catch (err) {
-    console.error("Failed to send OTP:", err.message);
-    throw err;
+/** Resend is preferred; Gmail keeps OTP delivery free while a domain is unavailable. */
+const sendOTP = async (email, otp) => {
+  const providers = [];
+  if (process.env.RESEND_API_KEY) providers.push(['Resend', () => sendWithResend(email, otp)]);
+  if (process.env.EMAIL_USER && process.env.EMAIL_PASS) providers.push(['Gmail', () => sendWithGmail(email, otp)]);
+  if (!providers.length) throw new Error('Email verification is not configured.');
+
+  let lastError;
+  for (const [name, send] of providers) {
+    try {
+      await send();
+      return;
+    } catch (err) {
+      lastError = err;
+      console.warn(`[Auth] ${name} email delivery failed; trying the next provider.`);
+    }
   }
+  console.error('[Auth] All email providers failed:', lastError?.message);
+  throw lastError || new Error('Email delivery failed.');
 };
 
 
@@ -121,7 +138,7 @@ router.post('/register', authLimiter, [
     }
 
     const unHashedOtp = generateOTP();
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) return res.status(503).json({ msg: 'Email verification is not configured yet.' });
+    if (!process.env.RESEND_API_KEY && (!process.env.EMAIL_USER || !process.env.EMAIL_PASS)) return res.status(503).json({ msg: 'Email verification is not configured yet.' });
 
     if (!user) {
       const salt = await bcrypt.genSalt(10);

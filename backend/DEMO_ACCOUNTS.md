@@ -9,6 +9,7 @@ The seed refreshes only these demo accounts, their demo listings, and their demo
 | Admin | `admin@lpu.in` | `password123` |
 | Seller | `seller@lpu.in` | `password123` |
 | Seller | `ganesh.sivah2025@lpu.in` | `password123` |
+| Seller applicant | `seller-applicant@lpu.in` | `password123` |
 | Buyer | `buyer@lpu.in` | `password123` |
 
-The seed creates 30 image-backed sample listings and two buyer orders. Checkout uses a clearly labelled test payment flow; no real payment provider is connected.
+The seed creates 30 image-backed sample listings, two buyer orders, a pending seller application, and an active intermediary case for the admin moderation flow. Checkout uses a clearly labelled test payment flow; no real payment provider is connected.

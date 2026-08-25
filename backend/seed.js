@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import User from './src/models/User.js';
 import Product from './src/models/Product.js';
 import Order from './src/models/Order.js';
+import Chat from './src/models/Chat.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -62,7 +63,7 @@ export const seedDemoData = async ({ force = true } = {}) => {
     await mongoose.connect(dbUri);
     
     // Only replace the demo namespace. Real user listings remain untouched.
-    const demoEmails = ['admin@lpu.in', 'seller@lpu.in', 'buyer@lpu.in', 'ganesh.sivah2025@lpu.in'];
+    const demoEmails = ['admin@lpu.in', 'seller@lpu.in', 'buyer@lpu.in', 'ganesh.sivah2025@lpu.in', 'seller-applicant@lpu.in'];
     const demoUsers = await User.find({ email: { $in: demoEmails } }).select('_id email');
     const demoUserIds = demoUsers.map((user) => user._id);
     if (!force && demoUsers.length === demoEmails.length) {
@@ -77,6 +78,7 @@ export const seedDemoData = async ({ force = true } = {}) => {
       }
     }
     await Order.deleteMany({ $or: [{ buyer: { $in: demoUserIds } }, { 'items.seller': { $in: demoUserIds } }] });
+    await Chat.deleteMany({ $or: [{ buyer: { $in: demoUserIds } }, { seller: { $in: demoUserIds } }, { adminIntermediary: { $in: demoUserIds } }] });
     await Product.deleteMany({ seller: { $in: demoUserIds } });
     await User.deleteMany({ _id: { $in: demoUserIds } });
     
@@ -135,7 +137,19 @@ export const seedDemoData = async ({ force = true } = {}) => {
        totalTransactions: 10
     }).save();
 
-    console.log("Created demo accounts: admin@lpu.in, seller@lpu.in, buyer@lpu.in, ganesh.sivah2025@lpu.in (All passwords: password123)");
+    const sellerApplicant = await new User({
+       email: 'seller-applicant@lpu.in',
+       password: defaultPassword,
+       name: 'Riya Applicant',
+       role: 'seller',
+       status: 'review',
+       campusLocation: 'BH4',
+       trustScore: 50,
+       isTrustedSeller: false,
+       totalTransactions: 0
+    }).save();
+
+    console.log("Created demo accounts: admin@lpu.in, seller@lpu.in, buyer@lpu.in, ganesh.sivah2025@lpu.in, seller-applicant@lpu.in (All passwords: password123)");
 
     // 2. Generate 30 Gallery Products
     console.log("Generating 30 campus listings...");
@@ -165,7 +179,7 @@ export const seedDemoData = async ({ force = true } = {}) => {
     }
 
     await Product.insertMany(products);
-    const savedProducts = await Product.find({ seller: { $in: [sellerUser._id, ganeshUser._id] } }).sort({ createdAt: 1 }).limit(3);
+    const savedProducts = await Product.find({ seller: { $in: [sellerUser._id, ganeshUser._id] }, status: 'active' }).sort({ createdAt: 1 }).limit(3);
     if (savedProducts.length >= 2) {
       await new Order({
         buyer: buyerUser._id,
@@ -182,6 +196,14 @@ export const seedDemoData = async ({ force = true } = {}) => {
         status: 'placed',
         pickupLocation: 'BH1 Common Room',
         buyerNote: 'Second demo order for seller dashboard testing.'
+      }).save();
+
+      await new Chat({
+        product: savedProducts[0]._id,
+        buyer: buyerUser._id,
+        seller: savedProducts[0].seller,
+        isIntermediaryActive: true,
+        status: 'negotiating'
       }).save();
     }
     console.log(`Successfully injected ${products.length} campus listings and 2 demo orders.`);

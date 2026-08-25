@@ -94,11 +94,25 @@ router.get('/demand', auth, async (req, res) => {
         totalViews: await EventStream.countDocuments({ eventType: 'VIEW' }),
         scope: req.user.role === 'admin' ? 'marketplace' : 'seller'
      };
-     if (req.user.role !== 'admin') {
+     if (req.user.role === 'seller') {
        const sellerProducts = await Product.find({ seller: req.user.id }).select('_id');
        data.sellerListings = sellerProducts.length;
        data.sellerViews = await EventStream.countDocuments({ eventType: 'VIEW', targetId: { $in: sellerProducts.map((product) => product._id) } });
-       data.sellerOrders = await Order.countDocuments({ 'items.seller': req.user.id });
+       const sellerOrders = await Order.find({ 'items.seller': req.user.id }).select('items total status');
+       const sellerItems = sellerOrders.flatMap((order) => order.items.filter((item) => String(item.seller) === String(req.user.id)));
+       data.sellerOrders = sellerOrders.length;
+       data.sellerCompletedOrders = sellerOrders.filter((order) => order.status === 'completed').length;
+       data.sellerPendingOrders = sellerOrders.filter((order) => ['placed', 'confirmed', 'ready'].includes(order.status)).length;
+       data.sellerRevenue = sellerItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+       data.sellerConversionRate = data.sellerViews ? Math.round((data.sellerOrders / data.sellerViews) * 100) : 0;
+       data.sellerAverageOrderValue = data.sellerOrders ? Math.round(data.sellerRevenue / data.sellerOrders) : 0;
+     } else if (req.user.role === 'buyer') {
+       const buyerOrders = await Order.find({ buyer: req.user.id }).select('total status items');
+       data.buyerOrders = buyerOrders.length;
+       data.buyerSpend = buyerOrders.filter((order) => order.status !== 'cancelled').reduce((sum, order) => sum + order.total, 0);
+       data.buyerActiveOrders = buyerOrders.filter((order) => !['completed', 'cancelled'].includes(order.status)).length;
+       data.buyerCompletedOrders = buyerOrders.filter((order) => order.status === 'completed').length;
+       data.buyerSavedValue = buyerOrders.filter((order) => order.status !== 'cancelled').reduce((sum, order) => sum + order.items.reduce((itemSum, item) => itemSum + item.price * item.quantity, 0), 0);
      }
      res.json(data);
   } catch (err) {
