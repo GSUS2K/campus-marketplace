@@ -22,6 +22,11 @@ const orderSchema = new mongoose.Schema({
   paymentMethod: { type: String, enum: ['test'], default: 'test' },
   paymentStatus: { type: String, enum: ['paid', 'refunded'], default: 'paid' },
   pickupLocation: { type: String, default: 'Main Gate' },
+  pickupSlot: { type: String, trim: true, default: '' },
+  handoverCode: { type: String, required: true, select: false },
+  buyerConfirmedAt: { type: Date, default: null },
+  sellerConfirmedAt: { type: Date, default: null },
+  handoverConfirmedAt: { type: Date, default: null },
   buyerNote: { type: String, trim: true, maxlength: 300, default: '' }
 }, { timestamps: true });
 

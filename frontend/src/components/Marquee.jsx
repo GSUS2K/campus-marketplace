@@ -3,7 +3,7 @@ import React from 'react';
 const Marquee = ({ text, className = '', reverse = false, speed = 'normal' }) => {
   const speedClass = speed === 'fast' ? 'animate-marquee-fast' : 'animate-marquee';
   const direction = reverse ? 'reverse' : 'normal';
-  const content = text || 'LPU MARKETPLACE';
+  const content = text || 'CAMPUS PICKS  /  VERIFIED PEOPLE  /  CLEAR HANDOVERS';
 
   return (
     <div className={`marquee-window flex overflow-hidden whitespace-nowrap w-full select-none ${className}`} aria-label={content}>

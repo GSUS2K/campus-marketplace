@@ -7,6 +7,7 @@ import User from '../models/User.js';
 import AnalyticsEngine from '../services/AnalyticsEngine.js';
 import auth from '../middleware/auth.js';
 import fs from 'fs';
+import { audit, notify } from '../utils/activity.js';
 
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
@@ -154,6 +155,8 @@ router.put('/admin/verify/:id', auth, async (req, res) => {
      product.isVerifiedProduct = true;
      product.status = 'active';
      await product.save();
+     await audit(req.user.id, 'listing.approved', 'Product', product._id, { title: product.title });
+     await notify(product.seller, 'moderation', 'Listing approved', `Your listing “${product.title}” is now visible in the campus marketplace.`, `/product/${product._id}`);
 
      res.json({ msg: 'Product successfully verified.', product });
   } catch (err) {
@@ -178,6 +181,8 @@ router.put('/admin/flag/:id', auth, async (req, res) => {
 
      product.status = 'flagged';
      await product.save();
+     await audit(req.user.id, 'listing.flagged', 'Product', product._id, { title: product.title });
+     await notify(product.seller, 'moderation', 'Listing needs attention', `Your listing “${product.title}” was held by campus moderation for review.`, '/profile');
 
      res.json({ msg: 'Product has been flagged and removed from active queue.', product });
   } catch (err) {

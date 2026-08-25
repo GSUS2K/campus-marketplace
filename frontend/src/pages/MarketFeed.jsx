@@ -149,7 +149,7 @@ const MarketFeed = () => {
     <div className="w-full min-h-screen pb-32 transition-colors duration-500 font-sans bg-transparent">
       <div className="w-full border-b border-theme/15 bg-bg/35 backdrop-blur-sm pt-28 pb-2">
         <Marquee
-          text="LPU MARKETPLACE  /  VERIFIED LPU COMMUNITY  /  BUY LOCAL  /  SELL SIMPLY  /  MEET SAFELY  /  CAMPUS-FIRST COMMERCE"
+          text="CAMPUS PICKS  /  VERIFIED PEOPLE  /  BUY LOCAL  /  SELL SIMPLY  /  MEET SAFELY  /  CLEAR HANDOVERS  /  CAMPUS-FIRST COMMERCE"
           className="py-1 text-[10px] font-semibold tracking-[0.24em] text-theme/55"
         />
       </div>

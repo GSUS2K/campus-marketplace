@@ -28,6 +28,9 @@ import trustRoutes from './routes/trust.js';
 import analyticsRoutes from './routes/analytics.js';
 import adminRoutes from './routes/admin.js';
 import orderRoutes from './routes/orders.js';
+import reviewRoutes from './routes/reviews.js';
+import reportRoutes from './routes/reports.js';
+import notificationRoutes from './routes/notifications.js';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -60,6 +63,9 @@ app.use('/api/trust', trustRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Attach Socket to Analytics Engine
 AnalyticsEngine.attachSocket(io);

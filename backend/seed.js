@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -7,6 +8,7 @@ import User from './src/models/User.js';
 import Product from './src/models/Product.js';
 import Order from './src/models/Order.js';
 import Chat from './src/models/Chat.js';
+import Report from './src/models/Report.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -72,13 +74,17 @@ export const seedDemoData = async ({ force = true } = {}) => {
       const adminProductCount = demoAdmin ? await Product.countDocuments({ seller: demoAdmin._id }) : 0;
       const demoBuyer = await User.findOne({ email: 'buyer@lpu.in' }).select('_id');
       const demoOrderCount = await Order.countDocuments({ buyer: demoBuyer?._id });
-      if (demoProductCount >= 30 && demoOrderCount >= 2 && adminProductCount === 0) {
+      const demoOrdersWithCodes = await Order.countDocuments({ buyer: demoBuyer?._id, handoverCode: { $exists: true, $ne: '' } });
+      const applicantCount = await User.countDocuments({ email: 'seller-applicant@lpu.in', status: 'review' });
+      const reportCount = await Report.countDocuments({ reporter: demoBuyer?._id, status: 'open' });
+      if (demoProductCount >= 30 && demoOrderCount >= 2 && demoOrdersWithCodes >= 2 && applicantCount === 1 && reportCount >= 1 && adminProductCount === 0) {
         console.log('Demo data already exists; skipping automatic seed.');
         return;
       }
     }
     await Order.deleteMany({ $or: [{ buyer: { $in: demoUserIds } }, { 'items.seller': { $in: demoUserIds } }] });
     await Chat.deleteMany({ $or: [{ buyer: { $in: demoUserIds } }, { seller: { $in: demoUserIds } }, { adminIntermediary: { $in: demoUserIds } }] });
+    await Report.deleteMany({ reporter: { $in: demoUserIds } });
     await Product.deleteMany({ seller: { $in: demoUserIds } });
     await User.deleteMany({ _id: { $in: demoUserIds } });
     
@@ -187,6 +193,8 @@ export const seedDemoData = async ({ force = true } = {}) => {
         total: savedProducts[0].price,
         status: 'confirmed',
         pickupLocation: 'Main Gate',
+        pickupSlot: 'Today · 5:00–6:00 PM',
+        handoverCode: crypto.randomBytes(3).toString('hex').toUpperCase(),
         buyerNote: 'Demo order for testing the buyer flow.'
       }).save();
       await new Order({
@@ -195,6 +203,8 @@ export const seedDemoData = async ({ force = true } = {}) => {
         total: savedProducts[1].price,
         status: 'placed',
         pickupLocation: 'BH1 Common Room',
+        pickupSlot: 'Tomorrow · 12:00–1:00 PM',
+        handoverCode: crypto.randomBytes(3).toString('hex').toUpperCase(),
         buyerNote: 'Second demo order for seller dashboard testing.'
       }).save();
 
@@ -204,6 +214,13 @@ export const seedDemoData = async ({ force = true } = {}) => {
         seller: savedProducts[0].seller,
         isIntermediaryActive: true,
         status: 'negotiating'
+      }).save();
+      await new Report({
+        targetType: 'Product',
+        targetId: savedProducts[0]._id,
+        reporter: buyerUser._id,
+        reason: 'misleading_listing',
+        details: 'Demo safety report: verify the condition photos before approving this listing.'
       }).save();
     }
     console.log(`Successfully injected ${products.length} campus listings and 2 demo orders.`);

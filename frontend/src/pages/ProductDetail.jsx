@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
+import { Flag, ShieldCheck } from 'lucide-react';
 import { CONDITION_LABELS } from '../constants';
 import { DEMO_PRODUCTS } from '../data/demoContent';
 import { requestJson } from '../lib/api';
@@ -15,6 +16,9 @@ const ProductDetail = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeImg, setActiveImg] = useState(0);
   const [errorMsg, setErrorMsg] = useState('');
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState('misleading_listing');
+  const [reportDetails, setReportDetails] = useState('');
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -59,6 +63,15 @@ const ProductDetail = () => {
 
     const demoSuffix = new URLSearchParams(window.location.search).get('demo') === '1' ? '&demo=1' : '';
     navigate(`/chat?productId=${product._id}&product=${encodeURIComponent(product.title)}${demoSuffix}`);
+  };
+
+  const submitReport = async (event) => {
+    event.preventDefault();
+    const token = localStorage.getItem('trms_token');
+    if (!token) { toast.error('Sign in to report a listing.'); navigate('/login'); return; }
+    const { response, data } = await requestJson('/api/reports', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ targetType: 'Product', targetId: product._id, reason: reportReason, details: reportDetails }) });
+    if (!response.ok) { toast.error(data.msg || 'Could not submit report.'); return; }
+    setReportOpen(false); setReportDetails(''); toast.success('Safety report sent to the moderation team.');
   };
 
   if (isLoading) {
@@ -163,6 +176,7 @@ const ProductDetail = () => {
               <span className="text-theme/40">Trust Score</span>
               <span>{product.seller?.trustScore ?? 0}/100</span>
             </div>
+            <div className="mt-4 flex items-start gap-2 rounded-2xl bg-emerald-500/10 p-3 text-xs text-theme/65"><ShieldCheck size={15} className="mt-0.5 shrink-0 text-emerald-500" /><span>{product.seller?.isTrustedSeller ? 'Trusted seller: strong completed-transaction history.' : 'Newer seller: keep chat on-platform and use the verified handover flow.'}</span></div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
               <button
@@ -178,6 +192,8 @@ const ProductDetail = () => {
                 Start Secure Chat
               </button>
             </div>
+            <button type="button" onClick={() => setReportOpen((open) => !open)} className="mt-5 flex items-center gap-2 text-xs text-theme/45 transition hover:text-theme"><Flag size={14} /> Report a safety concern</button>
+            {reportOpen && <form onSubmit={submitReport} className="mt-4 space-y-3 rounded-2xl border border-theme/10 bg-theme/5 p-4"><label className="block text-xs font-semibold text-theme/55">What should moderators review?<select value={reportReason} onChange={(event) => setReportReason(event.target.value)} className="glass-control mt-2 w-full rounded-xl px-3 py-2 text-sm outline-none"><option value="misleading_listing">Misleading listing</option><option value="fraud">Possible fraud</option><option value="counterfeit">Counterfeit item</option><option value="unsafe_meetup">Unsafe meetup request</option><option value="other">Other</option></select></label><textarea value={reportDetails} onChange={(event) => setReportDetails(event.target.value)} maxLength={1000} rows={3} placeholder="Add context for the safety team (optional)" className="glass-control w-full rounded-xl px-3 py-2 text-sm outline-none" /><button className="button-primary w-full justify-center" type="submit">Send report</button></form>}
           </div>
         </motion.div>
       </div>

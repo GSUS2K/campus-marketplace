@@ -53,23 +53,23 @@ const AnalyticsDashboard = () => {
   const isBuyer = user.role === 'buyer';
   const metricCards = isAdmin
     ? [
-      ['Active connections', data?.activeConnections ?? 0, 'Live campus sessions', <Activity size={18} />],
-      ['Search events', Number(data?.totalSearches || 0).toLocaleString(), 'Demand signals captured', <TrendingUp size={18} />],
-      ['Listing views', Number(data?.totalViews || 0).toLocaleString(), 'Buyer attention', <Eye size={18} />],
-      ['Active supply', data?.totalActiveListings ?? 0, 'Verified listings live now', <MapPin size={18} />]
+      ['Active connections', data?.activeConnections ?? 0, 'Live campus sessions', <Activity key="active" size={18} />],
+      ['Search events', Number(data?.totalSearches || 0).toLocaleString(), 'Demand signals captured', <TrendingUp key="searches" size={18} />],
+      ['Listing views', Number(data?.totalViews || 0).toLocaleString(), 'Buyer attention', <Eye key="views" size={18} />],
+      ['Active supply', data?.totalActiveListings ?? 0, 'Verified listings live now', <MapPin key="supply" size={18} />]
     ]
     : isBuyer
       ? [
-        ['Orders placed', data?.buyerOrders ?? 0, 'Your purchase history', <Activity size={18} />],
-        ['Active handovers', data?.buyerActiveOrders ?? 0, 'Still moving through pickup', <TrendingUp size={18} />],
-        ['Campus spend', `Rs. ${Number(data?.buyerSpend || 0).toLocaleString()}`, 'Excludes cancelled orders', <Eye size={18} />],
-        ['Completed', data?.buyerCompletedOrders ?? 0, 'Successful handovers', <CheckCircle size={18} />]
+        ['Orders placed', data?.buyerOrders ?? 0, 'Your purchase history', <Activity key="orders" size={18} />],
+        ['Active handovers', data?.buyerActiveOrders ?? 0, 'Still moving through pickup', <TrendingUp key="active-handovers" size={18} />],
+        ['Campus spend', `Rs. ${Number(data?.buyerSpend || 0).toLocaleString()}`, 'Excludes cancelled orders', <Eye key="spend" size={18} />],
+        ['Completed', data?.buyerCompletedOrders ?? 0, 'Successful handovers', <CheckCircle key="completed" size={18} />]
       ]
       : [
-        ['Your listings', data?.sellerListings ?? 0, 'Active and under review', <MapPin size={18} />],
-        ['Listing views', data?.sellerViews ?? 0, 'Buyer attention', <Eye size={18} />],
-        ['Sales value', `Rs. ${Number(data?.sellerRevenue || 0).toLocaleString()}`, 'Across your orders', <TrendingUp size={18} />],
-        ['Conversion', `${data?.sellerConversionRate ?? 0}%`, `${data?.sellerOrders ?? 0} orders from views`, <Activity size={18} />]
+        ['Your listings', data?.sellerListings ?? 0, 'Active and under review', <MapPin key="listings" size={18} />],
+        ['Listing views', data?.sellerViews ?? 0, 'Buyer attention', <Eye key="seller-views" size={18} />],
+        ['Sales value', `Rs. ${Number(data?.sellerRevenue || 0).toLocaleString()}`, 'Across your orders', <TrendingUp key="sales" size={18} />],
+        ['Conversion', `${data?.sellerConversionRate ?? 0}%`, `${data?.sellerOrders ?? 0} orders from views`, <Activity key="conversion" size={18} />]
       ];
   return <section className="page-shell">
     <PageIntro eyebrow={isAdmin ? 'Marketplace intelligence' : 'Seller workspace'} title={isAdmin ? 'See what is really moving.' : 'Your insights'} description={isAdmin ? 'Monitor demand, supply, and activity across the whole campus marketplace.' : 'Understand what people are searching for and where demand is moving.'} action={<button onClick={fetchDemand} className="button-secondary"><RefreshCw size={15} />Refresh</button>} />
