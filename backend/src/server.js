@@ -31,14 +31,15 @@ import orderRoutes from './routes/orders.js';
 import reviewRoutes from './routes/reviews.js';
 import reportRoutes from './routes/reports.js';
 import notificationRoutes from './routes/notifications.js';
+import rateLimit from 'express-rate-limit';
 
 const app = express();
 app.set('trust proxy', 1);
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: '*',
-    methods: ['GET', 'POST']
+    origin: (origin, callback) => { if (!origin || allowedOrigins.includes(origin)) return callback(null, true); return callback(new Error('Origin not allowed.')); },
+    methods: ['GET', 'POST', 'PUT', 'DELETE']
   }
 });
 
@@ -49,6 +50,7 @@ app.use(express.json({ limit: '1mb' }));
 app.use(cors({ origin: (origin, callback) => { if (!origin || allowedOrigins.includes(origin)) return callback(null, true); return callback(new Error('Origin not allowed.')); }, credentials: true }));
 app.use(helmet({ crossOriginResourcePolicy: false })); // Allow serving images cross-origin
 app.use(morgan('dev'));
+app.use('/api', rateLimit({ windowMs: 60 * 1000, limit: 240, standardHeaders: 'draft-8', legacyHeaders: false, message: { msg: 'Too many requests. Please slow down and try again shortly.' } }));
 
 app.get('/', (_req, res) => res.json({ name: 'Campus Marketplace API', status: 'running', health: '/health' }));
 

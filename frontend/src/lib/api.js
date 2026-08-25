@@ -21,8 +21,8 @@ export async function requestJson(path, options = {}, timeoutMs = 8000) {
 
     return { response, data };
   } catch (error) {
-    if (error.name === 'AbortError') throw new Error('The marketplace service is taking too long to respond.');
-    throw new Error('The marketplace service is unavailable right now.');
+    const msg = error.name === 'AbortError' ? 'The marketplace service is taking too long to respond.' : 'The marketplace service is unavailable right now.';
+    return { response: { ok: false, status: 503 }, data: { msg } };
   } finally {
     window.clearTimeout(timeout);
   }

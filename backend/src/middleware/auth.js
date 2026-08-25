@@ -1,6 +1,5 @@
 import jsonwebtoken from 'jsonwebtoken';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'dissertation_super_secret_key_2026';
+import { JWT_SECRET } from '../config/auth.js';
 
 const authMiddleware = (req, res, next) => {
   // Get token from header

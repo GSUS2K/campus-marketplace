@@ -6,10 +6,9 @@ import crypto from 'crypto';
 import User from '../models/User.js';
 import { body, validationResult } from 'express-validator';
 import rateLimit from 'express-rate-limit';
+import { JWT_SECRET, JWT_EXPIRES_IN } from '../config/auth.js';
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex');
-if (!process.env.JWT_SECRET) console.warn('[Security] JWT_SECRET is not configured; sessions will reset on restart. Set a persistent secret in Render.');
 const LPU_EMAIL = /^[^\s@]+@lpu\.in$/i;
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, standardHeaders: 'draft-8', legacyHeaders: false, message: { msg: 'Too many authentication attempts. Try again later.' } });
 const otpLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 5, standardHeaders: 'draft-8', legacyHeaders: false, message: { msg: 'Too many OTP requests. Try again later.' } });
@@ -222,7 +221,7 @@ router.post('/verify-otp', otpLimiter, [
     jsonwebtoken.sign(
       payload, 
       JWT_SECRET, 
-      { expiresIn: '24h' }, 
+      { expiresIn: JWT_EXPIRES_IN },
       (err, token) => {
         if (err) throw err;
         res.json({ 
@@ -299,7 +298,7 @@ router.post('/login', authLimiter, [
      jsonwebtoken.sign(
         payload, 
         JWT_SECRET, 
-        { expiresIn: '24h' }, 
+        { expiresIn: JWT_EXPIRES_IN },
         (err, token) => {
           if (err) throw err;
           res.json({ 
@@ -419,7 +418,7 @@ router.post('/mobile/verify', otpLimiter, [body('email').isEmail(), body('otp').
     user.phoneVerified = true; user.mobileOtpHash = null; user.mobileOtpExpires = null; user.mobileOtpAttempts = 0; await user.save();
     if (user.role === 'seller' && user.status !== 'verified') return res.json({ sellerApprovalRequired: true, email: user.email });
     const payload = { user: { id: user.id, role: user.role, trustScore: user.trustScore, isVerified: true } };
-    const token = jsonwebtoken.sign(payload, JWT_SECRET, { expiresIn: '24h' });
+    const token = jsonwebtoken.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
     res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, campusLocation: user.campusLocation, trustScore: user.trustScore, isTrustedSeller: user.isTrustedSeller, status: user.status } });
   } catch (err) { console.error('[Auth] mobile OTP verification failed:', err.message); res.status(500).json({ msg: 'Could not verify mobile number.' }); }
 });
