@@ -17,6 +17,7 @@ const ChatRoom = () => {
   const [draft, setDraft] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [isRequestingMediation, setIsRequestingMediation] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const user = JSON.parse(localStorage.getItem('trms_user') || '{}');
   const productId = searchParams.get('productId');
@@ -35,6 +36,12 @@ const ChatRoom = () => {
       }
 
       try {
+        if (searchParams.get('demo') === '1') {
+          setChatData(DEMO_CHAT.chat);
+          setMessages(DEMO_CHAT.messages);
+          return;
+        }
+
         const token = localStorage.getItem('trms_token');
         const res = await fetch(`${API_BASE}/api/chats/for-product/${productId}`, {
           method: 'POST',
@@ -50,20 +57,21 @@ const ChatRoom = () => {
         setChatData(data.chat);
         setMessages(data.messages || []);
       } catch (err) {
-        setChatData(DEMO_CHAT.chat);
-        setMessages(DEMO_CHAT.messages);
+        setChatData(null);
+        setMessages([]);
+        setErrorMsg(err.message || 'The conversation could not be loaded. Please try again.');
       } finally {
         setIsLoading(false);
       }
     };
 
     loadChat();
-  }, [productId]);
+  }, [productId, searchParams]);
 
   useEffect(() => {
     if (!socket || !chatData?._id || !user?.id) return;
 
-    socket.emit('join_chat', { chatId: chatData._id, userId: user.id });
+    socket.emit('join_chat', { chatId: chatData._id });
 
     const handleIncoming = (message) => {
       setMessages((prev) => {
@@ -99,13 +107,27 @@ const ChatRoom = () => {
       const message = await res.json();
       if (!res.ok) throw new Error(message.msg || 'Message delivery failed');
 
-      setMessages((prev) => [...prev, message]);
+      setMessages((prev) => prev.some((existing) => existing._id === message._id) ? prev : [...prev, message]);
       setDraft('');
     } catch (err) {
       toast.error(err.message);
     } finally {
       setIsSending(false);
     }
+  };
+
+  const requestMediation = async () => {
+    if (!chatData?._id) return;
+    setIsRequestingMediation(true);
+    const token = localStorage.getItem('trms_token');
+    try {
+      const res = await fetch(`${API_BASE}/api/chats/${chatData._id}/mediation`, { method: 'PUT', headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.msg || 'Could not request campus mediation.');
+      setChatData(data.chat);
+      setMessages(data.messages || []);
+      toast.success('A verified campus intermediary has been requested.');
+    } catch (err) { toast.error(err.message); } finally { setIsRequestingMediation(false); }
   };
 
   if (isLoading) {
@@ -156,7 +178,7 @@ const ChatRoom = () => {
               </div>
             ) : (
               messages.map((message) => {
-                const isMine = message.sender?._id === user.id;
+                const isMine = String(message.sender?._id || '') === String(user.id || '');
                 return (
                   <div key={message._id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
                     <div className={`max-w-[80%] rounded-[1.5rem] px-5 py-4 border ${isMine ? 'bg-theme text-bg border-theme' : 'bg-theme/5 border-theme/10'}`}>
@@ -213,7 +235,7 @@ const ChatRoom = () => {
               </div>
               <div>
                 <p className="text-[9px] tracking-[0.35em] uppercase text-theme/30 mb-1">Trust Mode</p>
-                <p className="font-medium">{chatData?.isIntermediaryActive ? 'Admin mediated' : 'Direct'}</p>
+                <p className="font-medium">{chatData?.isIntermediaryActive ? 'Campus mediated' : 'Direct'}</p>
               </div>
             </div>
           </motion.div>
@@ -236,6 +258,7 @@ const ChatRoom = () => {
               >
                 Return
               </button>
+              {!chatData?.isIntermediaryActive && <button type="button" disabled={isRequestingMediation} onClick={requestMediation} className="w-full px-5 py-4 rounded-full border border-bg/20 text-[11px] tracking-[0.2em] uppercase hover:bg-bg hover:text-theme transition-colors disabled:opacity-40">{isRequestingMediation ? 'Requesting...' : 'Request campus mediator'}</button>}
             </div>
           </motion.div>
         </aside>

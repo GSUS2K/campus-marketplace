@@ -30,11 +30,11 @@ const ProductDetail = () => {
       }
       try {
         const { response: res, data } = await requestJson(`/api/products/${id}`);
-        if (!res.ok) throw new Error('Artifact not found.');
+        if (!res.ok) throw new Error(data.msg || 'Listing not found.');
         setProduct(data);
-      } catch (_err) {
-        setProduct(DEMO_PRODUCTS.find((item) => item._id === id) || DEMO_PRODUCTS[0]);
-        setErrorMsg('');
+      } catch (err) {
+        setProduct(null);
+        setErrorMsg(err.message || 'Listing could not be loaded.');
       } finally {
         setIsLoading(false);
       }

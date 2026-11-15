@@ -6,7 +6,8 @@ const HOSTELS = ['BH1', 'BH2', 'BH3', 'BH4', 'BH5', 'BH6', 'BH7', 'BH8', 'BH9', 
 const DEMO_ACCOUNTS = [
   { label: 'Buyer', email: 'buyer@lpu.in' },
   { label: 'Seller', email: 'seller@lpu.in' },
-  { label: 'Admin', email: 'admin@lpu.in' }
+  { label: 'Admin', email: 'admin@lpu.in' },
+  { label: 'Intermediary', email: 'intermediary@lpu.in' }
 ];
 
 const Login = () => {
@@ -304,7 +305,7 @@ const Login = () => {
 
         {(mode !== 'verify' && mode !== 'mobile-verify' && mode !== 'reset') && (
           <div className="mt-8 border-t border-theme/10 pt-6 text-center">
-            {mode === 'login' && <div className="mb-6 rounded-2xl border border-theme/10 bg-theme/5 p-4 text-left"><div className="flex items-center justify-between gap-3"><div><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-theme/45">Presentation accounts</p><p className="mt-1 text-xs text-theme/50">Seeded LPU demo workspaces</p></div><span className="rounded-full bg-accent/15 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-accent">Demo</span></div><div className="mt-3 grid grid-cols-3 gap-2">{DEMO_ACCOUNTS.map((account) => <button key={account.email} type="button" onClick={() => fillDemoAccount(account.email)} className="rounded-xl border border-theme/10 px-2 py-2 text-xs font-semibold transition hover:bg-theme hover:text-bg">{account.label}</button>)}</div></div>}
+            {mode === 'login' && <div className="mb-6 rounded-2xl border border-theme/10 bg-theme/5 p-4 text-left"><div className="flex items-center justify-between gap-3"><div><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-theme/45">Presentation accounts</p><p className="mt-1 text-xs text-theme/50">Seeded LPU demo workspaces</p></div><span className="rounded-full bg-accent/15 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-accent">Demo</span></div><div className="mt-3 grid grid-cols-2 gap-2">{DEMO_ACCOUNTS.map((account) => <button key={account.email} type="button" onClick={() => fillDemoAccount(account.email)} className="rounded-xl border border-theme/10 px-2 py-2 text-xs font-semibold transition hover:bg-theme hover:text-bg">{account.label}</button>)}</div></div>}
             <button
               onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setErrorMsg(''); setSuccessMsg(''); }}
               type="button"

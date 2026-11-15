@@ -7,6 +7,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import mongoose from 'mongoose';
+import jsonwebtoken from 'jsonwebtoken';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,6 +21,7 @@ import connectDB from './config/db.js';
 import registerChatHandlers from './socket/chatHandler.js';
 import logger from './utils/logger.js';
 import { seedDemoData } from '../seed.js';
+import { JWT_SECRET } from './config/auth.js';
 
 import authRoutes from './routes/auth.js';
 import productRoutes from './routes/products.js';
@@ -31,6 +33,7 @@ import orderRoutes from './routes/orders.js';
 import reviewRoutes from './routes/reviews.js';
 import reportRoutes from './routes/reports.js';
 import notificationRoutes from './routes/notifications.js';
+import wantedRequestRoutes from './routes/wantedRequests.js';
 import rateLimit from 'express-rate-limit';
 
 const app = express();
@@ -44,6 +47,17 @@ const io = new Server(server, {
 });
 
 app.set('io', io);
+
+io.use((socket, next) => {
+  const token = socket.handshake.auth?.token;
+  if (!token) return next();
+  try {
+    socket.data.user = jsonwebtoken.verify(token, JWT_SECRET).user;
+    return next();
+  } catch (_error) {
+    return next(new Error('Socket authentication failed.'));
+  }
+});
 
 const allowedOrigins = (process.env.CORS_ORIGINS || 'https://lpu-campus-marketplace.netlify.app,http://localhost:5173,http://localhost:4173').split(',').map((origin) => origin.trim()).filter(Boolean);
 app.use(express.json({ limit: '1mb' }));
@@ -68,6 +82,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/requests', wantedRequestRoutes);
 
 // Attach Socket to Analytics Engine
 AnalyticsEngine.attachSocket(io);

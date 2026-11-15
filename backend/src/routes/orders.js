@@ -28,6 +28,7 @@ router.post('/', auth, async (req, res) => {
     if (products.length !== requested.length) {
       return res.status(409).json({ msg: 'One or more listings are no longer available.' });
     }
+    if (products.some((product) => String(product.seller) === req.user.id)) return res.status(400).json({ msg: 'You cannot place an order for your own listing.' });
 
     const productById = new Map(products.map((product) => [product.id, product]));
     const reservedProducts = [];

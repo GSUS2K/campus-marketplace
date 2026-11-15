@@ -14,6 +14,7 @@ export const SocketProvider = ({ children }) => {
   useEffect(() => {
     // Connect to the Node.js backend
     const newSocket = io(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}`, {
+      auth: { token: localStorage.getItem('trms_token') || undefined },
       transports: ['websocket', 'polling'] // Try WebSocket first
     });
     

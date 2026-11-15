@@ -9,6 +9,7 @@ import Product from './src/models/Product.js';
 import Order from './src/models/Order.js';
 import Chat from './src/models/Chat.js';
 import Report from './src/models/Report.js';
+import WantedRequest from './src/models/WantedRequest.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -65,7 +66,7 @@ export const seedDemoData = async ({ force = true } = {}) => {
     await mongoose.connect(dbUri);
     
     // Only replace the demo namespace. Real user listings remain untouched.
-    const demoEmails = ['admin@lpu.in', 'seller@lpu.in', 'buyer@lpu.in', 'ganesh.sivah2025@lpu.in', 'seller-applicant@lpu.in'];
+    const demoEmails = ['admin@lpu.in', 'intermediary@lpu.in', 'seller@lpu.in', 'buyer@lpu.in', 'ganesh.sivah2025@lpu.in', 'seller-applicant@lpu.in'];
     const demoUsers = await User.find({ email: { $in: demoEmails } }).select('_id email');
     const demoUserIds = demoUsers.map((user) => user._id);
     if (!force && demoUsers.length === demoEmails.length) {
@@ -85,6 +86,7 @@ export const seedDemoData = async ({ force = true } = {}) => {
     await Order.deleteMany({ $or: [{ buyer: { $in: demoUserIds } }, { 'items.seller': { $in: demoUserIds } }] });
     await Chat.deleteMany({ $or: [{ buyer: { $in: demoUserIds } }, { seller: { $in: demoUserIds } }, { adminIntermediary: { $in: demoUserIds } }] });
     await Report.deleteMany({ reporter: { $in: demoUserIds } });
+    await WantedRequest.deleteMany({ requester: { $in: demoUserIds } });
     await Product.deleteMany({ seller: { $in: demoUserIds } });
     await User.deleteMany({ _id: { $in: demoUserIds } });
     
@@ -104,6 +106,18 @@ export const seedDemoData = async ({ force = true } = {}) => {
        trustScore: 99,
        isTrustedSeller: true,
        totalTransactions: 150
+    }).save();
+
+    const intermediaryUser = await new User({
+       email: 'intermediary@lpu.in',
+       password: defaultPassword,
+       name: 'Ishita Verifier',
+       role: 'intermediary',
+       status: 'verified',
+       campusLocation: 'Student Services',
+       trustScore: 96,
+       isTrustedSeller: false,
+       totalTransactions: 0
     }).save();
 
     const sellerUser = await new User({
@@ -155,7 +169,7 @@ export const seedDemoData = async ({ force = true } = {}) => {
        totalTransactions: 0
     }).save();
 
-    console.log("Created demo accounts: admin@lpu.in, seller@lpu.in, buyer@lpu.in, ganesh.sivah2025@lpu.in, seller-applicant@lpu.in (All passwords: password123)");
+    console.log("Created demo accounts: admin@lpu.in, intermediary@lpu.in, seller@lpu.in, buyer@lpu.in, ganesh.sivah2025@lpu.in, seller-applicant@lpu.in (All passwords: password123)");
 
     // 2. Generate 30 Gallery Products
     console.log("Generating 30 campus listings...");
@@ -213,6 +227,7 @@ export const seedDemoData = async ({ force = true } = {}) => {
         buyer: buyerUser._id,
         seller: savedProducts[0].seller,
         isIntermediaryActive: true,
+        adminIntermediary: intermediaryUser._id,
         status: 'negotiating'
       }).save();
       await new Report({
@@ -222,6 +237,10 @@ export const seedDemoData = async ({ force = true } = {}) => {
         reason: 'misleading_listing',
         details: 'Demo safety report: verify the condition photos before approving this listing.'
       }).save();
+      await WantedRequest.insertMany([
+        { title: 'Looking for DBMS and OS reference books', description: 'Second-hand books or clean printed notes for placement preparation.', category: 'Books', budget: 700, campusLocation: 'GH3', requester: buyerUser._id },
+        { title: 'Need a used scientific calculator', description: 'Working calculator for semester exams. A cover is a plus.', category: 'Electronics', budget: 1100, campusLocation: 'BH1', requester: buyerUser._id }
+      ]);
     }
     console.log(`Successfully injected ${products.length} campus listings and 2 demo orders.`);
 

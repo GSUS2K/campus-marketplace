@@ -18,6 +18,8 @@ const canAccessChat = (chat, userId) => {
   );
 };
 
+const canModerateChat = (chat, user) => user?.role === 'admin' || (user?.role === 'intermediary' && String(chat.adminIntermediary || '') === String(user.id));
+
 const loadChatPayload = async (chatId) => {
   const chat = await Chat.findById(chatId)
     .populate('product', ['title', 'price', 'category', 'images', 'campusLocation', 'status'])
@@ -61,12 +63,14 @@ router.post('/for-product/:productId', auth, async (req, res) => {
 
     if (!chat) {
       const sellerRequiresIntermediary = await TrustEngine.requiresIntermediary(sellerId);
+      const intermediary = sellerRequiresIntermediary ? await User.findOne({ role: 'intermediary', status: 'verified' }).select('_id') : null;
+      const admin = !intermediary && sellerRequiresIntermediary ? await User.findOne({ role: 'admin' }).select('_id') : null;
       chat = await Chat.create({
         product: productId,
         buyer: currentUserId,
         seller: sellerId,
         isIntermediaryActive: sellerRequiresIntermediary,
-        adminIntermediary: sellerRequiresIntermediary ? (await User.findOne({ role: 'admin' }))?._id : undefined
+        adminIntermediary: intermediary?._id || admin?._id || undefined
       });
     }
 
@@ -78,6 +82,27 @@ router.post('/for-product/:productId', auth, async (req, res) => {
   }
 });
 
+router.put('/:chatId/mediation', auth, async (req, res) => {
+  try {
+    const chat = await Chat.findById(req.params.chatId);
+    if (!chat) return res.status(404).json({ msg: 'Chat not found.' });
+    if (!canAccessChat(chat, req.user.id)) return res.status(403).json({ msg: 'Only the buyer or seller can request mediation.' });
+    if (chat.isIntermediaryActive) return res.status(409).json({ msg: 'A moderator is already assigned to this conversation.' });
+    const intermediary = await User.findOne({ role: 'intermediary', status: 'verified' }).select('_id name');
+    const admin = !intermediary ? await User.findOne({ role: 'admin' }).select('_id name') : null;
+    chat.isIntermediaryActive = true;
+    chat.adminIntermediary = intermediary?._id || admin?._id || null;
+    await chat.save();
+    const message = await Message.create({ chatId: chat._id, sender: req.user.id, content: 'Campus mediation has been requested for this conversation.', messageType: 'system_alert' });
+    const io = req.app.get('io');
+    if (io) io.to(chat._id.toString()).emit('receive_message', await Message.findById(message._id).populate('sender', ['name', 'role', 'isTrustedSeller']));
+    return res.json(await loadChatPayload(chat._id));
+  } catch (err) {
+    console.error('[Chats] mediation request failed:', err.message);
+    return res.status(500).json({ msg: 'Could not request campus mediation.' });
+  }
+});
+
 router.get('/:chatId', auth, async (req, res) => {
   try {
     const payload = await loadChatPayload(req.params.chatId);
@@ -85,7 +110,7 @@ router.get('/:chatId', auth, async (req, res) => {
       return res.status(404).json({ msg: 'Chat not found' });
     }
 
-    if (!canAccessChat(payload.chat, req.user.id) && req.user.role !== 'admin') {
+    if (!canAccessChat(payload.chat, req.user.id) && !canModerateChat(payload.chat, req.user)) {
       return res.status(403).json({ msg: 'Access denied' });
     }
 
@@ -103,7 +128,7 @@ router.get('/:chatId/messages', auth, async (req, res) => {
       return res.status(404).json({ msg: 'Chat not found' });
     }
 
-    if (!canAccessChat(chat, req.user.id) && req.user.role !== 'admin') {
+    if (!canAccessChat(chat, req.user.id) && !canModerateChat(chat, req.user)) {
       return res.status(403).json({ msg: 'Access denied' });
     }
 
@@ -127,7 +152,7 @@ router.post('/:chatId/messages', auth, async (req, res) => {
       return res.status(404).json({ msg: 'Chat not found' });
     }
 
-    if (!canAccessChat(chat, req.user.id) && req.user.role !== 'admin') {
+    if (!canAccessChat(chat, req.user.id) && !canModerateChat(chat, req.user)) {
       return res.status(403).json({ msg: 'Access denied' });
     }
 

@@ -222,12 +222,18 @@ router.get('/:id', async (req, res) => {
  */
 router.post('/', auth, upload.array('images', 10), async (req, res) => {
    try {
+      const seller = await User.findById(req.user.id).select('role status');
+      if (!seller || seller.role !== 'seller' || seller.status !== 'verified') return res.status(403).json({ msg: 'Verified seller access is required to create listings.' });
       // 1. Mandatory 3 Image Check
       if (!req.files || req.files.length < 3) {
          return res.status(400).json({ msg: 'Please add at least 3 images so buyers can inspect the listing.' });
       }
 
       const { title, description, price, category, condition, campusLocation } = req.body;
+      if (!String(title || '').trim() || !String(description || '').trim() || !String(campusLocation || '').trim()) return res.status(400).json({ msg: 'Title, description, and campus location are required.' });
+      if (!['Books', 'Electronics', 'Apparel', 'Miscellaneous'].includes(category)) return res.status(400).json({ msg: 'Choose a valid category.' });
+      if (!['new', 'like_new', 'good', 'fair', 'poor', 'needs_repair'].includes(condition)) return res.status(400).json({ msg: 'Choose a valid condition.' });
+      if (!Number.isFinite(Number(price)) || Number(price) < 0 || Number(price) > 100000) return res.status(400).json({ msg: 'Enter a valid price.' });
       const riskLevel = price > 5000 ? 'high' : price > 1500 ? 'medium' : 'low';
 
       // Extract file paths from Multer payload
@@ -247,6 +253,7 @@ router.post('/', auth, upload.array('images', 10), async (req, res) => {
       });
 
       const product = await newProduct.save();
+      await audit(req.user.id, 'listing.submitted', 'Product', product._id, { title: product.title, riskLevel });
       res.json(product);
 
    } catch (err) {

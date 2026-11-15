@@ -13,8 +13,10 @@ router.post('/', auth, async (req, res) => {
     const existing = await Report.findOne({ targetType, targetId, reporter: req.user.id, status: { $in: ['open', 'in_review'] } });
     if (existing) return res.status(409).json({ msg: 'You already have an active report for this item.' });
     const report = await Report.create({ targetType, targetId, reporter: req.user.id, reason, details: String(details).trim() });
+    const intermediary = await User.findOne({ role: 'intermediary', status: 'verified' }).select('_id');
     const admin = await User.findOne({ role: 'admin' }).select('_id');
-    if (admin) await notify(admin._id, 'safety', 'New safety report', `${reason.replace('_', ' ')} report needs review.`, '/admin');
+    const reviewer = intermediary || admin;
+    if (reviewer) await notify(reviewer._id, 'safety', 'New safety report', `${reason.replace('_', ' ')} report needs review.`, '/admin');
     await audit(req.user.id, 'report.created', targetType, targetId, { reportId: report._id, reason });
     res.status(201).json(report);
   } catch (error) { console.error('[Reports] create failed:', error.message); res.status(500).json({ msg: 'Could not submit safety report.' }); }

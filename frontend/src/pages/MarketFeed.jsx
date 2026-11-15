@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSocket } from '../context/SocketContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowRight, BookOpen, Laptop, ShieldCheck, Shirt, Sparkles } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import Marquee from '../components/Marquee';
 import { CATEGORIES, HOSTEL_GROUPS } from '../constants';
@@ -10,6 +11,12 @@ import { requestJson } from '../lib/api';
 import { ProductImage, StatusPill } from '../components/Ui';
 
 const ALL_HOSTELS = ['All Origins', ...Object.values(HOSTEL_GROUPS).flat()];
+const COLLECTIONS = [
+  { category: 'Books', label: 'Study reset', description: 'Notes, calculators, books, and project gear', icon: BookOpen },
+  { category: 'Electronics', label: 'Tech on campus', description: 'Devices that still have a lot left to give', icon: Laptop },
+  { category: 'Apparel', label: 'Wear it again', description: 'Good clothes with a second campus life', icon: Shirt },
+  { category: 'Miscellaneous', label: 'Useful nearby', description: 'Everyday essentials without the delivery wait', icon: Sparkles }
+];
 
 const TourOverlay = ({ onComplete }) => {
   const [step, setStep] = useState(0);
@@ -174,6 +181,12 @@ const MarketFeed = () => {
         </div>
       </header>
 
+      <section className="mx-auto grid max-w-7xl gap-3 px-5 py-5 sm:grid-cols-2 sm:px-8 lg:grid-cols-4">
+        {COLLECTIONS.map(({ category, label, description, icon: Icon }) => <button key={category} onClick={() => { setActiveCategory(category); window.scrollTo({ top: 520, behavior: 'smooth' }); }} className="group glass-panel rounded-2xl p-4 text-left transition hover:-translate-y-0.5 hover:border-accent/40"><div className="flex items-start justify-between"><Icon size={18} className="text-accent" /><ArrowRight size={16} className="text-theme/35 transition group-hover:translate-x-1 group-hover:text-theme" /></div><h2 className="mt-7 text-base font-semibold normal-case tracking-[-0.03em]">{label}</h2><p className="mt-1 text-xs leading-relaxed text-theme/55">{description}</p></button>)}
+      </section>
+
+      <section className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-5 pb-5 sm:px-8"><span className="mr-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-theme/40">Popular on campus</span>{['calculator', 'hostel', 'notes', 'headphones', 'hoodie'].map((term) => <button key={term} onClick={() => setSearchQuery(term)} className="rounded-full border border-theme/12 px-3 py-1.5 text-xs text-theme/65 transition hover:border-accent/40 hover:text-theme">{term}</button>)}</section>
+
       <div className="glass-panel sticky top-[88px] z-40 border-x-0 border-t-0 rounded-none px-4 sm:px-8 py-5 transition-colors duration-500">
         <div className="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between">
           <div className="flex gap-4 overflow-x-auto scrollbar-hide font-bold text-[14px]">
@@ -327,6 +340,8 @@ const MarketFeed = () => {
           </div>
         )}
       </div>
+
+      <section className="mx-auto mt-8 grid max-w-7xl gap-4 px-5 sm:grid-cols-3 sm:px-8"><div className="glass-panel rounded-2xl p-5"><ShieldCheck size={18} className="text-accent" /><h2 className="mt-4 text-base font-semibold normal-case">Verified before visible</h2><p className="mt-2 text-sm leading-relaxed text-theme/55">Listings are reviewed before they appear in the live feed.</p></div><div className="glass-panel rounded-2xl p-5"><span className="text-xl">01</span><h2 className="mt-4 text-base font-semibold normal-case">Keep pickup clear</h2><p className="mt-2 text-sm leading-relaxed text-theme/55">Orders use a shared handover code so both people confirm the exchange.</p></div><div className="glass-panel rounded-2xl p-5"><span className="text-xl">02</span><h2 className="mt-4 text-base font-semibold normal-case">Get help early</h2><p className="mt-2 text-sm leading-relaxed text-theme/55">Report a concern or request mediation when a conversation needs campus support.</p></div></section>
 
       {showTour && <TourOverlay onComplete={completeTour} />}
     </div>
