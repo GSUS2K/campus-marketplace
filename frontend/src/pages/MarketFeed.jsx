@@ -59,6 +59,7 @@ const TourOverlay = ({ onComplete }) => {
 const MarketFeed = () => {
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [feedError, setFeedError] = useState('');
   const [activeLocation, setActiveLocation] = useState('All Origins');
   const [activeCategory, setActiveCategory] = useState('All Listings');
   const [searchQuery, setSearchQuery] = useState('');
@@ -84,6 +85,7 @@ const MarketFeed = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       setIsLoading(true);
+      setFeedError('');
       const isDemoMode = new URLSearchParams(window.location.search).get('demo') === '1';
       if (isDemoMode) {
         setProducts(DEMO_PRODUCTS);
@@ -106,10 +108,14 @@ const MarketFeed = () => {
         });
 
         if (res.ok && Array.isArray(data)) setProducts(data);
-        else setProducts(DEMO_PRODUCTS);
+        else {
+          setProducts([]);
+          setFeedError(data.msg || 'Listings could not be loaded.');
+        }
       } catch (err) {
         console.error('Failed to fetch feed:', err);
-        setProducts(DEMO_PRODUCTS);
+        setProducts([]);
+        setFeedError(err.message || 'The marketplace is temporarily unavailable.');
       } finally {
         setIsLoading(false);
       }
@@ -163,7 +169,7 @@ const MarketFeed = () => {
             <p className="mt-5 max-w-lg text-sm leading-relaxed text-theme/60">Buy from people around you, sell what you no longer need, and keep campus life moving.</p>
           </div>
             <div className="grid max-w-md grid-cols-3 gap-2 sm:gap-3">
-            {[[isLoading ? '—' : `${products.length}`, 'live listings'], [`${CATEGORIES.length - 1}`, 'categories'], ['100%', 'campus first']].map(([value, label]) => <div key={label} className="glass-panel rounded-2xl p-4"><p className="text-xl font-semibold sm:text-2xl">{value}</p><p className="mt-1 text-[9px] uppercase tracking-[0.16em] text-theme/45">{label}</p></div>)}
+            {[[isLoading ? '—' : `${products.length}`, 'verified listings'], [`${CATEGORIES.length - 1}`, 'categories'], ['LPU', 'campus only']].map(([value, label]) => <div key={label} className="glass-panel rounded-2xl p-4"><p className="text-xl font-semibold sm:text-2xl">{value}</p><p className="mt-1 text-[9px] uppercase tracking-[0.16em] text-theme/45">{label}</p></div>)}
           </div>
         </div>
       </header>
@@ -255,12 +261,14 @@ const MarketFeed = () => {
           <div className="h-96 flex items-center justify-center">
             <div className="w-12 h-12 border-4 border-theme border-t-transparent rounded-full animate-spin" />
           </div>
+        ) : feedError ? (
+          <div className="mx-auto my-10 max-w-3xl px-5"><div role="alert" className="glass-panel rounded-3xl border border-amber-500/30 p-8 text-center sm:p-12"><p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-600">Marketplace connection issue</p><h3 className="mt-3 text-2xl font-semibold">We couldn’t load live listings.</h3><p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-theme/60">{feedError} Preview Mode has sample listings, but this page will not mix sample data into live results.</p><div className="mt-6 flex flex-wrap justify-center gap-3"><button onClick={() => window.location.reload()} className="button-primary">Try again</button><Link to="/?demo=1" className="button-secondary">Open sample marketplace</Link></div></div></div>
         ) : visibleProducts.length === 0 ? (
           <div className="h-96 flex flex-col items-center justify-center text-theme px-8 text-center">
             <div className="w-16 h-16 border-2 border-theme rounded-full flex items-center justify-center mb-6">
               <span className="text-2xl">!</span>
             </div>
-            <h3 className="text-xl font-bold uppercase mb-2">No Artifacts Found</h3>
+            <h3 className="text-xl font-bold mb-2">No listings match those filters</h3>
             <p className="text-sm text-theme/70 max-w-md">
               We couldn't locate anything matching your current filters. Try a different keyword or clear the active category.
             </p>
