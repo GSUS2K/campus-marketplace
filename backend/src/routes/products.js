@@ -116,12 +116,15 @@ router.get('/admin/pending', auth, async (req, res) => {
      if (!user) {
         return res.status(403).json({ msg: 'Session expired. Please re-authenticate.' });
      }
-     if (user.role !== 'admin') {
-        return res.status(403).json({ msg: 'Access denied. Administrative privileges required.' });
+     if (!['admin', 'intermediary'].includes(user.role)) {
+        return res.status(403).json({ msg: 'Access denied. Moderator privileges required.' });
      }
 
-     const products = await Product.find({ isVerifiedProduct: false, status: { $in: ['pending_review', 'active'] } })
+     const queue = { isVerifiedProduct: false, status: { $in: ['pending_review', 'active'] } };
+     if (user.role === 'intermediary') queue.$or = [{ reviewAssignedTo: null }, { reviewAssignedTo: user._id }];
+     const products = await Product.find(queue)
         .populate('seller', ['name', 'email'])
+        .populate('reviewAssignedTo', ['name', 'email'])
         .sort({ createdAt: 1 });
 
      const baseUrl = req.protocol + '://' + req.get('host');
@@ -145,15 +148,19 @@ router.get('/admin/pending', auth, async (req, res) => {
 router.put('/admin/verify/:id', auth, async (req, res) => {
   try {
      const user = await User.findById(req.user.id);
-     if (user.role !== 'admin') {
+     if (!user || !['admin', 'intermediary'].includes(user.role)) {
         return res.status(403).json({ msg: 'Access denied.' });
      }
 
      const product = await Product.findById(req.params.id);
      if (!product) return res.status(404).json({ msg: 'Product not found' });
+     if (user.role === 'intermediary' && product.reviewAssignedTo && String(product.reviewAssignedTo) !== String(user._id)) return res.status(409).json({ msg: 'This listing is assigned to another intermediary.' });
 
      product.isVerifiedProduct = true;
      product.status = 'active';
+     product.reviewAssignedTo = user._id;
+     product.reviewedAt = new Date();
+     product.verificationNotes = String(req.body?.notes || '').trim();
      await product.save();
      await audit(req.user.id, 'listing.approved', 'Product', product._id, { title: product.title });
      await notify(product.seller, 'moderation', 'Listing approved', `Your listing “${product.title}” is now visible in the campus marketplace.`, `/product/${product._id}`);
@@ -172,14 +179,18 @@ router.put('/admin/verify/:id', auth, async (req, res) => {
 router.put('/admin/flag/:id', auth, async (req, res) => {
   try {
      const user = await User.findById(req.user.id);
-     if (user.role !== 'admin') {
+     if (!user || !['admin', 'intermediary'].includes(user.role)) {
         return res.status(403).json({ msg: 'Access denied.' });
      }
 
      const product = await Product.findById(req.params.id);
      if (!product) return res.status(404).json({ msg: 'Product not found' });
+     if (user.role === 'intermediary' && product.reviewAssignedTo && String(product.reviewAssignedTo) !== String(user._id)) return res.status(409).json({ msg: 'This listing is assigned to another intermediary.' });
 
      product.status = 'flagged';
+     product.reviewAssignedTo = user._id;
+     product.reviewedAt = new Date();
+     product.verificationNotes = String(req.body?.notes || '').trim();
      await product.save();
      await audit(req.user.id, 'listing.flagged', 'Product', product._id, { title: product.title });
      await notify(product.seller, 'moderation', 'Listing needs attention', `Your listing “${product.title}” was held by campus moderation for review.`, '/profile');

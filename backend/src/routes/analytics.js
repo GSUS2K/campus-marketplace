@@ -3,6 +3,10 @@ import AnalyticsEngine from '../services/AnalyticsEngine.js';
 import Product from '../models/Product.js';
 import EventStream from '../models/EventStream.js';
 import Order from '../models/Order.js';
+import Report from '../models/Report.js';
+import Chat from '../models/Chat.js';
+import WantedRequest from '../models/WantedRequest.js';
+import User from '../models/User.js';
 import auth from '../middleware/auth.js';
 
 const router = express.Router();
@@ -85,6 +89,12 @@ router.get('/demand', auth, async (req, res) => {
        trendingCategories = [{ name: 'SYSTEM_IDLE', volume: 0 }];
      }
 
+     const [openRequests, safetyReports, activeMediations, orderStats] = await Promise.all([
+       WantedRequest.countDocuments({ status: 'open' }),
+       Report.countDocuments({ status: { $in: ['open', 'in_review'] } }),
+       Chat.countDocuments({ isIntermediaryActive: true, status: { $ne: 'closed' } }),
+       Order.aggregate([{ $match: { status: { $ne: 'cancelled' } } }, { $group: { _id: null, count: { $sum: 1 }, value: { $sum: '$total' } } }])
+     ]);
      const data = {
         surgeLocations,
         trendingCategories,
@@ -92,7 +102,12 @@ router.get('/demand', auth, async (req, res) => {
         totalActiveListings: totalProducts,
         totalSearches: await EventStream.countDocuments({ eventType: 'SEARCH' }),
         totalViews: await EventStream.countDocuments({ eventType: 'VIEW' }),
-        scope: req.user.role === 'admin' ? 'marketplace' : 'seller'
+        openRequests,
+        safetyReports,
+        activeMediations,
+        completedOrderValue: orderStats[0]?.value || 0,
+        totalOrders: orderStats[0]?.count || 0,
+        scope: ['admin', 'intermediary'].includes(req.user.role) ? 'marketplace' : req.user.role
      };
      if (req.user.role === 'seller') {
        const sellerProducts = await Product.find({ seller: req.user.id }).select('_id');
@@ -113,6 +128,13 @@ router.get('/demand', auth, async (req, res) => {
        data.buyerActiveOrders = buyerOrders.filter((order) => !['completed', 'cancelled'].includes(order.status)).length;
        data.buyerCompletedOrders = buyerOrders.filter((order) => order.status === 'completed').length;
        data.buyerSavedValue = buyerOrders.filter((order) => order.status !== 'cancelled').reduce((sum, order) => sum + order.items.reduce((itemSum, item) => itemSum + item.price * item.quantity, 0), 0);
+     } else if (req.user.role === 'intermediary') {
+       data.assignedReports = await Report.countDocuments({ assignedTo: req.user.id, status: { $in: ['open', 'in_review'] } });
+       data.assignedMediations = await Chat.countDocuments({ adminIntermediary: req.user.id, isIntermediaryActive: true, status: { $ne: 'closed' } });
+       data.availableReviews = await Product.countDocuments({ isVerifiedProduct: false, status: { $in: ['pending_review', 'active'] }, $or: [{ reviewAssignedTo: null }, { reviewAssignedTo: req.user.id }] });
+     } else if (req.user.role === 'admin') {
+       data.verifiedSellers = await User.countDocuments({ role: 'seller', status: 'verified' });
+       data.pendingSellerAccess = await User.countDocuments({ role: 'seller', status: { $in: ['pending', 'review'] } });
      }
      res.json(data);
   } catch (err) {

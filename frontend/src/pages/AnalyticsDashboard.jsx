@@ -50,14 +50,22 @@ const AnalyticsDashboard = () => {
 
   const user = JSON.parse(localStorage.getItem('trms_user') || '{}');
   const isAdmin = user.role === 'admin';
+  const isIntermediary = user.role === 'intermediary';
   const isBuyer = user.role === 'buyer';
   const metricCards = isAdmin
     ? [
-      ['Active connections', data?.activeConnections ?? 0, 'Live campus sessions', <Activity key="active" size={18} />],
-      ['Search events', Number(data?.totalSearches || 0).toLocaleString(), 'Demand signals captured', <TrendingUp key="searches" size={18} />],
-      ['Listing views', Number(data?.totalViews || 0).toLocaleString(), 'Buyer attention', <Eye key="views" size={18} />],
-      ['Active supply', data?.totalActiveListings ?? 0, 'Verified listings live now', <MapPin key="supply" size={18} />]
+      ['Marketplace value', `Rs. ${Number(data?.completedOrderValue || 0).toLocaleString()}`, `${data?.totalOrders ?? 0} non-cancelled orders`, <TrendingUp key="value" size={18} />],
+      ['Open safety work', data?.safetyReports ?? 0, 'Reports needing a decision', <CheckCircle key="safety" size={18} />],
+      ['Mediated handovers', data?.activeMediations ?? 0, 'Active campus support cases', <Activity key="mediation" size={18} />],
+      ['Open demand posts', data?.openRequests ?? 0, 'Requests not yet fulfilled', <MapPin key="requests" size={18} />]
     ]
+    : isIntermediary
+      ? [
+        ['Available reviews', data?.availableReviews ?? 0, 'Listings you can verify', <CheckCircle key="review" size={18} />],
+        ['Assigned reports', data?.assignedReports ?? 0, 'Safety reports in your queue', <Activity key="reports" size={18} />],
+        ['Mediated chats', data?.assignedMediations ?? 0, 'Handover support cases', <TrendingUp key="chats" size={18} />],
+        ['Open demand posts', data?.openRequests ?? 0, 'Campus needs to watch', <MapPin key="requests" size={18} />]
+      ]
     : isBuyer
       ? [
         ['Orders placed', data?.buyerOrders ?? 0, 'Your purchase history', <Activity key="orders" size={18} />],
@@ -72,7 +80,7 @@ const AnalyticsDashboard = () => {
         ['Conversion', `${data?.sellerConversionRate ?? 0}%`, `${data?.sellerOrders ?? 0} orders from views`, <Activity key="conversion" size={18} />]
       ];
   return <section className="page-shell">
-    <PageIntro eyebrow={isAdmin ? 'Marketplace intelligence' : 'Seller workspace'} title={isAdmin ? 'See what is really moving.' : 'Your insights'} description={isAdmin ? 'Monitor demand, supply, and activity across the whole campus marketplace.' : 'Understand what people are searching for and where demand is moving.'} action={<button onClick={fetchDemand} className="button-secondary"><RefreshCw size={15} />Refresh</button>} />
+    <PageIntro eyebrow={isAdmin || isIntermediary ? 'Marketplace intelligence' : isBuyer ? 'Buyer workspace' : 'Seller workspace'} title={isAdmin ? 'Marketplace health, not vanity metrics.' : isIntermediary ? 'Safety work and demand signals.' : 'Your insights'} description={isAdmin ? 'Monitor real order value, open safety work, demand, and supply across the campus marketplace.' : isIntermediary ? 'Prioritise verification work with active reports, mediated handovers, and live demand.' : 'Understand what people are searching for and where demand is moving.'} action={<button onClick={fetchDemand} className="button-secondary"><RefreshCw size={15} />Refresh</button>} />
     <div className="mb-8 flex items-center gap-3"><StatusPill tone={isLive ? 'good' : 'warn'}>{isLive ? 'Live data' : 'Preview data'}</StatusPill><span className="text-xs text-theme/45">Updated just now · auto refreshes every 30 seconds</span></div>
     <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">{metricCards.map(([label, value, note, icon]) => <StatCard key={label} label={label} value={value} note={note} icon={icon} />)}</div>
     <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.2fr_0.8fr]">

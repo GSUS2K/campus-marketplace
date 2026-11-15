@@ -54,6 +54,14 @@ const productSchema = new mongoose.Schema({
     enum: ['low', 'medium', 'high'],
     default: 'low'
   },
+  reviewAssignedTo: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null,
+    index: true
+  },
+  reviewedAt: { type: Date, default: null },
+  verificationNotes: { type: String, trim: true, maxlength: 1000, default: '' },
   
   // Real-time Analytics Tracking
   lifetimeViews: {

@@ -32,7 +32,12 @@ router.get('/overview', async (req, res) => {
       isAdmin ? User.countDocuments() : Promise.resolve(0),
       isAdmin ? User.countDocuments({ role: 'seller', status: 'verified' }) : Promise.resolve(0),
       isAdmin ? User.find({ role: 'seller', status: { $in: ['pending', 'review'] } }).select('name email campusLocation status trustScore createdAt').sort({ createdAt: 1 }) : Promise.resolve([]),
-      isAdmin ? Product.find({ isVerifiedProduct: false, status: { $in: ['pending_review', 'active'] } }).populate('seller', ['name', 'email', 'status']).sort({ createdAt: 1 }) : Promise.resolve([]),
+      Product.find(isAdmin
+        ? { isVerifiedProduct: false, status: { $in: ['pending_review', 'active'] } }
+        : { isVerifiedProduct: false, status: { $in: ['pending_review', 'active'] }, $or: [{ reviewAssignedTo: null }, { reviewAssignedTo: req.user.id }] })
+        .populate('seller', ['name', 'email', 'status'])
+        .populate('reviewAssignedTo', ['name', 'email'])
+        .sort({ createdAt: 1 }),
       isAdmin ? Order.aggregate([{ $group: { _id: '$status', count: { $sum: 1 }, value: { $sum: '$total' } } }]) : Promise.resolve([]),
       Chat.find(escalationQuery).populate('product', ['title', 'price']).populate('buyer', ['name', 'email']).populate('seller', ['name', 'email']).populate('adminIntermediary', ['name', 'email']).sort({ updatedAt: -1 }),
       Report.find(reportQuery).populate('reporter', ['name', 'email']).sort({ createdAt: 1 })
