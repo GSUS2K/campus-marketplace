@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSocket } from '../context/SocketContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, BookOpen, Laptop, ShieldCheck, Shirt, Sparkles } from 'lucide-react';
+import { ArrowRight, BookOpen, Heart, Laptop, MapPin, ShieldCheck, Shirt, ShoppingBag, Sparkles } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import Marquee from '../components/Marquee';
 import { CATEGORIES, HOSTEL_GROUPS } from '../constants';
@@ -17,6 +17,45 @@ const COLLECTIONS = [
   { category: 'Apparel', label: 'Wear it again', description: 'Good clothes with a second campus life', icon: Shirt },
   { category: 'Miscellaneous', label: 'Useful nearby', description: 'Everyday essentials without the delivery wait', icon: Sparkles }
 ];
+
+const productHref = (id, demoSuffix) => `/product/${id}${demoSuffix}`;
+
+const CatalogCard = ({ product, index, demoSuffix, saved, onToggleSaved }) => {
+  const [activeImage, setActiveImage] = useState(0);
+  const images = product.images?.filter(Boolean).length ? product.images.filter(Boolean) : [''];
+  const imageIndex = Math.min(activeImage, images.length - 1);
+
+  const addToBag = (event) => {
+    event.preventDefault();
+    const token = localStorage.getItem('trms_token');
+    const demo = new URLSearchParams(window.location.search).get('demo') === '1';
+    if (!token && !demo) { toast.error('Sign in to save items to your bag.'); return; }
+    const cart = JSON.parse(localStorage.getItem('outfit_cart') || '[]');
+    if (cart.some((item) => item._id === product._id)) { toast.success('This listing is already in your bag.'); return; }
+    cart.push(product);
+    localStorage.setItem('outfit_cart', JSON.stringify(cart));
+    window.dispatchEvent(new Event('cartUpdated'));
+    toast.success(`${product.title} added to Bag`);
+  };
+
+  return <motion.article initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: Math.min(index * 0.035, 0.3) }} className="catalog-card group relative">
+    <div className="relative aspect-[4/5] overflow-hidden rounded-[1.45rem] bg-theme/8" onMouseEnter={() => images.length > 1 && setActiveImage(1)} onMouseLeave={() => setActiveImage(0)}>
+      <Link to={productHref(product._id, demoSuffix)} className="absolute inset-0 block" aria-label={`View ${product.title}`}>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div key={`${product._id}-${imageIndex}`} initial={{ opacity: 0, scale: 1.035 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.985 }} transition={{ duration: 0.38, ease: 'easeOut' }} className="absolute inset-0"><ProductImage src={images[imageIndex]} alt={product.title} title={product.title} className="h-full w-full" /></motion.div>
+        </AnimatePresence>
+      </Link>
+      <div className="absolute left-3 top-3 flex items-center gap-2">{product.isVerifiedProduct && <StatusPill tone="good">Verified</StatusPill>}</div>
+      <button type="button" onClick={() => onToggleSaved(product._id)} aria-label={saved ? 'Remove from saved listings' : 'Save listing'} className={`absolute right-3 top-3 grid h-10 w-10 place-items-center rounded-full border backdrop-blur-md transition ${saved ? 'border-rose-400/40 bg-rose-400/90 text-white' : 'border-white/35 bg-black/20 text-white hover:bg-white hover:text-black'}`}><Heart size={16} fill={saved ? 'currentColor' : 'none'} /></button>
+      <div className="absolute bottom-3 left-3 right-3 flex translate-y-2 items-center justify-between opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+        <span className="rounded-full bg-black/55 px-3 py-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-md">{product.condition?.replace('_', ' ') || 'Good condition'}</span>
+        <button onClick={addToBag} className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-black shadow-lg"><ShoppingBag size={14} /> Add</button>
+      </div>
+      {images.length > 1 && <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">{images.map((_, imageNumber) => <button key={imageNumber} aria-label={`Show photo ${imageNumber + 1}`} onClick={(event) => { event.preventDefault(); setActiveImage(imageNumber); }} className={`h-1.5 rounded-full transition-all ${imageIndex === imageNumber ? 'w-5 bg-white' : 'w-1.5 bg-white/55 hover:bg-white'}`} />)}</div>}
+    </div>
+    <div className="px-1 pb-1 pt-4"><div className="flex items-start justify-between gap-4"><div className="min-w-0"><p className="mb-1 text-[9px] font-bold uppercase tracking-[0.18em] text-theme/45">{product.category}</p><Link to={productHref(product._id, demoSuffix)} className="block"><h3 className="line-clamp-2 text-[15px] font-semibold leading-[1.12] tracking-[-0.03em] transition group-hover:text-accent">{product.title}</h3></Link></div><span className="shrink-0 text-base font-semibold tracking-[-0.04em]">Rs. {Number(product.price || 0).toLocaleString()}</span></div><div className="mt-3 flex items-center justify-between text-[11px] text-theme/50"><span className="inline-flex items-center gap-1"><MapPin size={12} />{product.campusLocation}</span><span>{product.seller?.trustScore ? `${product.seller.trustScore} trust` : 'Campus listed'}</span></div></div>
+  </motion.article>;
+};
 
 const TourOverlay = ({ onComplete }) => {
   const [step, setStep] = useState(0);
@@ -74,6 +113,9 @@ const MarketFeed = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [showTour, setShowTour] = useState(false);
+  const [savedListings, setSavedListings] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('saved_listings') || '[]'); } catch { return []; }
+  });
   const dropdownRef = useRef(null);
   const sortRef = useRef(null);
   const { alerts } = useSocket();
@@ -136,6 +178,15 @@ const MarketFeed = () => {
     setShowTour(false);
   };
 
+  const toggleSaved = (id) => {
+    setSavedListings((current) => {
+      const next = current.includes(id) ? current.filter((savedId) => savedId !== id) : [...current, id];
+      localStorage.setItem('saved_listings', JSON.stringify(next));
+      toast.success(current.includes(id) ? 'Removed from saved listings.' : 'Saved for later.');
+      return next;
+    });
+  };
+
   const visibleProducts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     let next = [...products];
@@ -163,6 +214,7 @@ const MarketFeed = () => {
       <div className="w-full border-b border-theme/15 bg-bg/35 backdrop-blur-sm pt-28 pb-2">
         <Marquee
           text="CAMPUS PICKS  /  VERIFIED PEOPLE  /  BUY LOCAL  /  SELL SIMPLY  /  MEET SAFELY  /  CLEAR HANDOVERS  /  CAMPUS-FIRST COMMERCE"
+          speed="fast"
           className="py-1 text-[10px] font-semibold tracking-[0.24em] text-theme/55"
         />
       </div>
@@ -287,56 +339,8 @@ const MarketFeed = () => {
             </p>
           </div>
         ) : (
-          <div className="mx-auto grid max-w-7xl grid-cols-1 gap-5 px-5 py-8 sm:grid-cols-2 sm:px-8 lg:grid-cols-4">
-            {visibleProducts.map((product, idx) => (
-              <motion.div
-                key={product._id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5, delay: idx * 0.05 }}
-                className="glass-panel group relative flex flex-col rounded-[1.5rem] p-2 transition-all duration-300 hover:-translate-y-1"
-              >
-                <div className="relative aspect-[4/5] w-full overflow-hidden rounded-[1.15rem] border border-theme/10 transition-colors duration-300 hover:border-accent">
-                  <Link to={`/product/${product._id}${demoSuffix}`}>
-                    <ProductImage src={product.images?.[0]} alt={product.title} title={product.title} className="h-full w-full transition duration-500 group-hover:scale-105" />
-                  </Link>
-
-                  {product.isVerifiedProduct && (
-                    <div className="absolute top-4 left-4">
-                      <StatusPill tone="good">Verified</StatusPill>
-                    </div>
-                  )}
-                </div>
-
-                <div className="py-4 flex flex-col justify-start">
-                  <div>
-                    <h3 className="line-clamp-2 text-[15px] font-semibold leading-tight">{product.title}</h3>
-                    <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-theme/45">{product.category} · {product.campusLocation}</p>
-                  </div>
-                  <div className="mt-4 flex justify-between items-center gap-4">
-                    <span className="text-lg font-semibold">Rs. {Number(product.price || 0).toLocaleString()}</span>
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        const token = localStorage.getItem('trms_token');
-                        if (!token) {
-                          toast.error('Authentication required to use the Bag');
-                          return;
-                        }
-                        const cart = JSON.parse(localStorage.getItem('outfit_cart') || '[]');
-                        cart.push(product);
-                        localStorage.setItem('outfit_cart', JSON.stringify(cart));
-                        window.dispatchEvent(new Event('cartUpdated'));
-                        toast.success(`${product.title} added to Bag`);
-                      }}
-                      className="w-10 h-10 rounded-full border-[2px] border-theme flex items-center justify-center hover:bg-theme hover:text-bg transition-colors"
-                    >
-                      <span className="font-bold">+</span>
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            ))}
+          <div className="catalog-grid mx-auto grid max-w-7xl grid-cols-1 gap-x-5 gap-y-10 px-5 py-10 sm:grid-cols-2 sm:px-8 lg:grid-cols-4">
+            {visibleProducts.map((product, idx) => <CatalogCard key={product._id} product={product} index={idx} demoSuffix={demoSuffix} saved={savedListings.includes(product._id)} onToggleSaved={toggleSaved} />)}
           </div>
         )}
       </div>

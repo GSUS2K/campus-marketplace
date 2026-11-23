@@ -32,8 +32,8 @@ export default {
         'widest-xl': '0.25em',
       },
       animation: {
-        'marquee': 'marquee 34s linear infinite',
-        'marquee-fast': 'marquee 24s linear infinite',
+        'marquee': 'marquee 22s linear infinite',
+        'marquee-fast': 'marquee 16s linear infinite',
         'reveal-up': 'revealUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards',
       },
       keyframes: {

@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
-import { Flag, ShieldCheck } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Flag, Heart, MapPin, ShieldCheck } from 'lucide-react';
 import { CONDITION_LABELS } from '../constants';
 import { DEMO_PRODUCTS } from '../data/demoContent';
 import { requestJson } from '../lib/api';
@@ -45,12 +45,22 @@ const ProductDetail = () => {
 
   const imageCount = useMemo(() => product?.images?.length || 0, [product]);
 
+  useEffect(() => { setActiveImg(0); }, [id]);
+
   const handleAddToBag = () => {
     const cart = JSON.parse(localStorage.getItem('outfit_cart') || '[]');
+    if (cart.some((item) => item._id === product._id)) { toast.success('This listing is already in your bag.'); return; }
     cart.push(product);
     localStorage.setItem('outfit_cart', JSON.stringify(cart));
     window.dispatchEvent(new Event('cartUpdated'));
     toast.success(`${product.title} added to Bag`);
+  };
+
+  const toggleSaved = () => {
+    const saved = JSON.parse(localStorage.getItem('saved_listings') || '[]');
+    const next = saved.includes(product._id) ? saved.filter((itemId) => itemId !== product._id) : [...saved, product._id];
+    localStorage.setItem('saved_listings', JSON.stringify(next));
+    toast.success(saved.includes(product._id) ? 'Removed from saved listings.' : 'Saved for later.');
   };
 
   const handleOpenChat = () => {
@@ -113,8 +123,10 @@ const ProductDetail = () => {
           transition={{ duration: 0.8, ease: 'easeOut' }}
           className="space-y-4"
         >
-          <div className="w-full aspect-[4/5] overflow-hidden rounded-[2rem] border border-theme/10">
-            <ProductImage src={product.images?.[activeImg]} alt={product.title} title={product.title} className="h-full w-full" />
+          <div className="group relative w-full aspect-[4/5] overflow-hidden rounded-[2rem] border border-theme/10 bg-theme/5">
+            <AnimatePresence mode="wait" initial={false}><motion.div key={activeImg} initial={{ opacity: 0, scale: 1.03 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} transition={{ duration: 0.35, ease: 'easeOut' }} className="absolute inset-0"><ProductImage src={product.images?.[activeImg]} alt={product.title} title={product.title} className="h-full w-full" /></motion.div></AnimatePresence>
+            {imageCount > 1 && <><button type="button" aria-label="Previous image" onClick={() => setActiveImg((current) => (current - 1 + imageCount) % imageCount)} className="absolute left-4 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-white/40 bg-black/20 text-white opacity-0 backdrop-blur-md transition group-hover:opacity-100"><ChevronLeft size={18} /></button><button type="button" aria-label="Next image" onClick={() => setActiveImg((current) => (current + 1) % imageCount)} className="absolute right-4 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-white/40 bg-black/20 text-white opacity-0 backdrop-blur-md transition group-hover:opacity-100"><ChevronRight size={18} /></button></>}
+            <button type="button" onClick={toggleSaved} aria-label="Save listing" className="absolute right-4 top-4 grid h-11 w-11 place-items-center rounded-full border border-white/40 bg-black/20 text-white backdrop-blur-md transition hover:bg-white hover:text-black"><Heart size={17} /></button>
           </div>
 
           {imageCount > 1 && (
@@ -144,6 +156,7 @@ const ProductDetail = () => {
             <div className="mb-3 flex items-center gap-2"><StatusPill tone="neutral">{product.category}</StatusPill>{product.isVerifiedProduct && <StatusPill tone="good">Verified</StatusPill>}</div>
             <h1 className="text-4xl font-semibold leading-tight tracking-[-0.06em] md:text-5xl">{product.title}</h1>
             <p className="mt-4 text-3xl font-semibold">Rs. {Number(product.price || 0).toLocaleString()}</p>
+            <p className="mt-3 inline-flex items-center gap-1.5 text-sm text-theme/55"><MapPin size={15} />Pickup around {product.campusLocation}</p>
           </div>
 
           <div className="border-t border-theme/20 pt-6">

@@ -134,6 +134,36 @@
   will-change: transform;
 }
 
+.catalog-card {
+  position: relative;
+  min-width: 0;
+}
+
+.catalog-card::before {
+  position: absolute;
+  inset: -0.45rem;
+  z-index: -1;
+  border-radius: 1.8rem;
+  background: radial-gradient(circle at 50% 20%, rgba(var(--accent-color), 0.1), transparent 62%);
+  content: '';
+  opacity: 0;
+  transform: scale(0.94);
+  transition: opacity 300ms ease, transform 300ms ease;
+}
+
+.catalog-card:hover::before {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.catalog-card img {
+  transition: transform 650ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.catalog-card:hover img {
+  transform: scale(1.045);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .marquee-track { animation-play-state: paused; }
 }

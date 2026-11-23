@@ -8,7 +8,13 @@ const sellers = {
 };
 
 const img = (id) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=1200&q=85`;
-const listing = (id, title, price, category, condition, campusLocation, seller, image, hours, description) => ({ _id: id, title, price, category, condition, campusLocation, seller, images: [img(image)], isVerifiedProduct: true, status: 'active', createdAt: hoursAgo(hours), description });
+const alternateImages = {
+  Books: ['photo-1495446815901-a7297e633e8d', 'photo-1524995997946-a1c2e315a42f'],
+  Electronics: ['photo-1527443224154-c4a3942d3acf', 'photo-1517336714731-489689fd1ca8'],
+  Apparel: ['photo-1485230895905-ec40ba36b9bc', 'photo-1529139574466-a303027c1d8b'],
+  Miscellaneous: ['photo-1524758631624-e2822e304c36', 'photo-1497366754035-f200968a6e72']
+};
+const listing = (id, title, price, category, condition, campusLocation, seller, image, hours, description) => ({ _id: id, title, price, category, condition, campusLocation, seller, images: [img(image), ...alternateImages[category].map(img)], isVerifiedProduct: true, status: 'active', createdAt: hoursAgo(hours), description });
 
 export const DEMO_PRODUCTS = [
   listing('demo-calculus', 'Engineering Mathematics: Semester 1 Set', 580, 'Books', 'good', 'BH1', sellers.aarav, 'photo-1543002588-bfa74002ed7e', 2, 'Three annotated engineering mathematics books with clean binding and handwritten shortcut notes.'),
