@@ -250,6 +250,10 @@
   content: '';
 }
 
+.quick-view {
+  box-shadow: 0 32px 120px rgb(0 0 0 / 0.34);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .marquee-track { animation-play-state: paused; }
 }

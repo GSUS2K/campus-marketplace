@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSocket } from '../context/SocketContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, BookOpen, Heart, Laptop, MapPin, ShieldCheck, Shirt, ShoppingBag, Sparkles } from 'lucide-react';
+import { ArrowRight, BookOpen, ChevronLeft, ChevronRight, Heart, Laptop, MapPin, ShieldCheck, Shirt, ShoppingBag, Sparkles, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import Marquee from '../components/Marquee';
 import { CATEGORIES, HOSTEL_GROUPS } from '../constants';
@@ -20,7 +20,7 @@ const COLLECTIONS = [
 
 const productHref = (id, demoSuffix) => `/product/${id}${demoSuffix}`;
 
-const CatalogCard = ({ product, index, demoSuffix, saved, onToggleSaved }) => {
+const CatalogCard = ({ product, index, demoSuffix, saved, onToggleSaved, onQuickView }) => {
   const [activeImage, setActiveImage] = useState(0);
   const images = product.images?.filter(Boolean).length ? product.images.filter(Boolean) : [''];
   const imageIndex = Math.min(activeImage, images.length - 1);
@@ -49,12 +49,30 @@ const CatalogCard = ({ product, index, demoSuffix, saved, onToggleSaved }) => {
       <button type="button" onClick={() => onToggleSaved(product._id)} aria-label={saved ? 'Remove from saved listings' : 'Save listing'} className={`absolute right-3 top-3 grid h-10 w-10 place-items-center rounded-full border backdrop-blur-md transition ${saved ? 'border-rose-400/40 bg-rose-400/90 text-white' : 'border-white/35 bg-black/20 text-white hover:bg-white hover:text-black'}`}><Heart size={16} fill={saved ? 'currentColor' : 'none'} /></button>
       <div className="absolute bottom-3 left-3 right-3 flex translate-y-2 items-center justify-between opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100">
         <span className="rounded-full bg-black/55 px-3 py-2 text-[9px] font-semibold uppercase tracking-[0.16em] text-white backdrop-blur-md">{product.condition?.replace('_', ' ') || 'Good condition'}</span>
-        <button onClick={addToBag} className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-black shadow-lg"><ShoppingBag size={14} /> Add</button>
+        <div className="flex gap-2"><button onClick={(event) => { event.preventDefault(); onQuickView(product); }} className="rounded-full bg-black/55 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-white backdrop-blur-md">View</button><button onClick={addToBag} className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-black shadow-lg"><ShoppingBag size={14} /> Add</button></div>
       </div>
       {images.length > 1 && <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">{images.map((_, imageNumber) => <button key={imageNumber} aria-label={`Show photo ${imageNumber + 1}`} onClick={(event) => { event.preventDefault(); setActiveImage(imageNumber); }} className={`h-1.5 rounded-full transition-all ${imageIndex === imageNumber ? 'w-5 bg-white' : 'w-1.5 bg-white/55 hover:bg-white'}`} />)}</div>}
     </div>
     <div className="px-1 pb-1 pt-4"><div className="flex items-start justify-between gap-4"><div className="min-w-0"><p className="mb-1 text-[9px] font-bold uppercase tracking-[0.18em] text-theme/45">{product.category}</p><Link to={productHref(product._id, demoSuffix)} className="block"><h3 className="line-clamp-2 text-[15px] font-semibold leading-[1.12] tracking-[-0.03em] transition group-hover:text-accent">{product.title}</h3></Link></div><span className="shrink-0 text-base font-semibold tracking-[-0.04em]">Rs. {Number(product.price || 0).toLocaleString()}</span></div><div className="mt-3 flex items-center justify-between text-[11px] text-theme/50"><span className="inline-flex items-center gap-1"><MapPin size={12} />{product.campusLocation}</span><span>{product.seller?.trustScore ? `${product.seller.trustScore} trust` : 'Campus listed'}</span></div></div>
   </motion.article>;
+};
+
+const QuickView = ({ product, demoSuffix, onClose }) => {
+  const [imageIndex, setImageIndex] = useState(0);
+  const images = product.images?.filter(Boolean).length ? product.images.filter(Boolean) : [''];
+  const addToBag = () => {
+    const token = localStorage.getItem('trms_token');
+    const demo = new URLSearchParams(window.location.search).get('demo') === '1';
+    if (!token && !demo) { toast.error('Sign in to save items to your bag.'); return; }
+    const cart = JSON.parse(localStorage.getItem('outfit_cart') || '[]');
+    if (cart.some((item) => item._id === product._id)) { toast.success('This listing is already in your bag.'); return; }
+    localStorage.setItem('outfit_cart', JSON.stringify([...cart, product]));
+    window.dispatchEvent(new Event('cartUpdated'));
+    toast.success(`${product.title} added to Bag`);
+  };
+
+  useEffect(() => { const onKey = (event) => event.key === 'Escape' && onClose(); window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey); }, [onClose]);
+  return <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-end bg-black/55 p-0 backdrop-blur-sm sm:items-center sm:justify-center sm:p-6" role="dialog" aria-modal="true" aria-label={`Quick view for ${product.title}`}><button onClick={onClose} aria-label="Close quick view" className="absolute inset-0" /><motion.section initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }} transition={{ type: 'spring', damping: 28, stiffness: 260 }} className="quick-view relative grid max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-t-[2rem] bg-bg text-theme sm:grid-cols-2 sm:overflow-hidden sm:rounded-[2rem]"><div className="relative min-h-[22rem] bg-theme/8 sm:min-h-0"><AnimatePresence mode="wait" initial={false}><motion.div key={imageIndex} initial={{ opacity: 0, scale: 1.03 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} transition={{ duration: 0.3 }} className="absolute inset-0"><ProductImage src={images[imageIndex]} alt={product.title} title={product.title} className="h-full w-full" /></motion.div></AnimatePresence>{images.length > 1 && <><button onClick={() => setImageIndex((current) => (current - 1 + images.length) % images.length)} aria-label="Previous photo" className="absolute left-4 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-black/35 text-white backdrop-blur"><ChevronLeft size={18} /></button><button onClick={() => setImageIndex((current) => (current + 1) % images.length)} aria-label="Next photo" className="absolute right-4 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-black/35 text-white backdrop-blur"><ChevronRight size={18} /></button></>}<div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-1.5">{images.map((_, index) => <button key={index} onClick={() => setImageIndex(index)} aria-label={`View photo ${index + 1}`} className={`h-1.5 rounded-full ${index === imageIndex ? 'w-5 bg-white' : 'w-1.5 bg-white/60'}`} />)}</div></div><div className="flex flex-col p-6 sm:p-8"><button onClick={onClose} aria-label="Close quick view" className="ml-auto grid h-9 w-9 place-items-center rounded-full border border-theme/15 text-theme/60 transition hover:bg-theme hover:text-bg"><X size={17} /></button><div className="mt-8"><div className="flex flex-wrap gap-2"><StatusPill tone="neutral">{product.category}</StatusPill>{product.isVerifiedProduct && <StatusPill tone="good">Verified</StatusPill>}</div><h2 className="mt-4 text-3xl font-semibold leading-[0.94] tracking-[-0.06em]">{product.title}</h2><p className="mt-4 text-2xl font-semibold">Rs. {Number(product.price || 0).toLocaleString()}</p><p className="mt-4 line-clamp-3 text-sm leading-relaxed text-theme/60">{product.description}</p></div><div className="mt-7 grid grid-cols-2 gap-3 border-y border-theme/10 py-5 text-xs"><div><p className="text-[9px] font-bold uppercase tracking-[0.16em] text-theme/40">Pickup</p><p className="mt-1 inline-flex items-center gap-1 font-semibold"><MapPin size={13} />{product.campusLocation}</p></div><div><p className="text-[9px] font-bold uppercase tracking-[0.16em] text-theme/40">Seller trust</p><p className="mt-1 font-semibold">{product.seller?.trustScore ?? '—'}/100</p></div></div><div className="mt-auto grid gap-3 pt-7 sm:grid-cols-2"><button onClick={addToBag} className="button-secondary justify-center"><ShoppingBag size={15} />Add to bag</button><Link onClick={onClose} to={productHref(product._id, demoSuffix)} className="button-primary justify-center">Full details <ArrowRight size={15} /></Link></div></div></motion.section></motion.div>;
 };
 
 const TourOverlay = ({ onComplete }) => {
@@ -113,6 +131,7 @@ const MarketFeed = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [showTour, setShowTour] = useState(false);
+  const [quickViewProduct, setQuickViewProduct] = useState(null);
   const [savedListings, setSavedListings] = useState(() => {
     try { return JSON.parse(localStorage.getItem('saved_listings') || '[]'); } catch { return []; }
   });
@@ -336,13 +355,14 @@ const MarketFeed = () => {
           </div>
         ) : (
           <div className="catalog-grid mx-auto grid max-w-7xl grid-cols-1 gap-x-5 gap-y-10 px-5 py-10 sm:grid-cols-2 sm:px-8 lg:grid-cols-4">
-            {visibleProducts.map((product, idx) => <CatalogCard key={product._id} product={product} index={idx} demoSuffix={demoSuffix} saved={savedListings.includes(product._id)} onToggleSaved={toggleSaved} />)}
+            {visibleProducts.map((product, idx) => <CatalogCard key={product._id} product={product} index={idx} demoSuffix={demoSuffix} saved={savedListings.includes(product._id)} onToggleSaved={toggleSaved} onQuickView={setQuickViewProduct} />)}
           </div>
         )}
       </div>
 
       <section className="mx-auto mt-8 grid max-w-7xl gap-4 px-5 sm:grid-cols-3 sm:px-8"><div className="glass-panel rounded-2xl p-5"><ShieldCheck size={18} className="text-accent" /><h2 className="mt-4 text-base font-semibold normal-case">Verified before visible</h2><p className="mt-2 text-sm leading-relaxed text-theme/55">Listings are reviewed before they appear in the live feed.</p></div><div className="glass-panel rounded-2xl p-5"><span className="text-xl">01</span><h2 className="mt-4 text-base font-semibold normal-case">Keep pickup clear</h2><p className="mt-2 text-sm leading-relaxed text-theme/55">Orders use a shared handover code so both people confirm the exchange.</p></div><div className="glass-panel rounded-2xl p-5"><span className="text-xl">02</span><h2 className="mt-4 text-base font-semibold normal-case">Get help early</h2><p className="mt-2 text-sm leading-relaxed text-theme/55">Report a concern or request mediation when a conversation needs campus support.</p></div></section>
 
+      <AnimatePresence>{quickViewProduct && <QuickView product={quickViewProduct} demoSuffix={demoSuffix} onClose={() => setQuickViewProduct(null)} />}</AnimatePresence>
       {showTour && <TourOverlay onComplete={completeTour} />}
     </div>
   );
