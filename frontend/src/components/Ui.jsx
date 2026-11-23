@@ -30,16 +30,16 @@ export const StatusPill = ({ children, tone = 'neutral' }) => {
 };
 
 export const StatCard = ({ label, value, note, icon }) => (
-  <div className="glass-panel rounded-2xl p-5">
-    <div className="flex items-start justify-between gap-4"><p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-theme/45">{label}</p>{icon && <span className="text-lg text-theme/45">{icon}</span>}</div>
-    <p className="mt-4 text-3xl font-semibold tracking-tight">{value}</p>
+  <div className="workspace-stat rounded-[1.4rem] p-5">
+    <div className="flex items-start justify-between gap-4"><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-theme/45">{label}</p>{icon && <span className="text-lg text-accent">{icon}</span>}</div>
+    <p className="mt-5 text-3xl font-semibold tracking-[-0.06em]">{value}</p>
     {note && <p className="mt-2 text-xs text-theme/50">{note}</p>}
   </div>
 );
 
 export const PageIntro = ({ eyebrow, title, description, action }) => (
-  <header className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-    <div><p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.26em] text-accent">{eyebrow}</p><h1 className="text-4xl font-semibold tracking-[-0.06em] sm:text-5xl">{title}</h1>{description && <p className="mt-3 max-w-2xl text-sm leading-relaxed text-theme/55">{description}</p>}</div>
+  <header className="workspace-intro mb-9 flex flex-col gap-5 border-b border-theme/10 pb-7 sm:flex-row sm:items-end sm:justify-between">
+    <div><p className="mb-3 text-[10px] font-bold uppercase tracking-[0.28em] text-accent">{eyebrow}</p><h1 className="max-w-3xl text-4xl font-semibold leading-[0.9] tracking-[-0.07em] sm:text-5xl">{title}</h1>{description && <p className="mt-4 max-w-2xl text-sm leading-relaxed text-theme/55">{description}</p>}</div>
     {action}
   </header>
 );

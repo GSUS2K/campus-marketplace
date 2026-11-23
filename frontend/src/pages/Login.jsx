@@ -134,10 +134,12 @@ const Login = () => {
   };
 
   return (
-    <div className="flex min-h-[75vh] flex-col items-center justify-center px-4 py-10 font-sans">
-      <div className="glass-panel w-full max-w-[560px] rounded-[2rem] p-6 sm:p-10 lg:p-12">
+    <div className="auth-shell mx-auto grid min-h-[calc(100vh-7rem)] w-full max-w-7xl items-stretch gap-5 px-4 py-6 sm:px-8 lg:grid-cols-[0.9fr_1.1fr] lg:py-10">
+      <aside className="auth-story relative hidden overflow-hidden rounded-[2rem] bg-theme p-10 text-bg lg:flex lg:flex-col"><div className="absolute -right-24 -top-24 h-80 w-80 rounded-full bg-accent/35 blur-2xl" /><div className="relative"><p className="text-[10px] font-bold uppercase tracking-[0.28em] text-bg/60">LPU Marketplace</p><h2 className="mt-8 max-w-md text-5xl font-semibold leading-[0.88] tracking-[-0.08em]">A better<br />second life<br /><span className="text-bg/55">for good things.</span></h2><p className="mt-7 max-w-sm text-sm leading-relaxed text-bg/70">A verified exchange for students, staff, and campus life. No strangers, no delivery wait, no clutter.</p></div><div className="relative mt-auto grid grid-cols-2 gap-3"><div className="rounded-2xl border border-bg/15 bg-bg/10 p-4"><p className="text-2xl font-semibold">LPU</p><p className="mt-1 text-[9px] font-bold uppercase tracking-[0.15em] text-bg/55">Campus only</p></div><div className="rounded-2xl border border-bg/15 bg-bg/10 p-4"><p className="text-2xl font-semibold">Safe</p><p className="mt-1 text-[9px] font-bold uppercase tracking-[0.15em] text-bg/55">Clear handovers</p></div></div></aside>
+      <div className="glass-panel flex w-full items-center rounded-[2rem] p-6 sm:p-10 lg:p-12">
+      <div className="w-full">
         <div className="mb-10">
-          <h1 className="mb-3 text-4xl font-semibold tracking-[-0.07em] text-theme md:text-5xl">
+          <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.28em] text-accent">Campus access</p><h1 className="mb-3 text-4xl font-semibold tracking-[-0.07em] text-theme md:text-5xl">
             {mode === 'login' && 'ACCESS'}
             {mode === 'register' && 'JOIN'}
             {mode === 'verify' && 'CONFIRM'}
@@ -145,12 +147,12 @@ const Login = () => {
             {mode === 'reset' && 'RESET'}
           </h1>
           <p className="text-sm text-theme/55">
-            {mode === 'login' && 'Return to the curation.'}
-            {mode === 'register' && 'Exclusive access for academics.'}
-            {mode === 'verify' && 'Identity validation.'}
-            {mode === 'mobile-verify' && 'Mobile validation.'}
-            {mode === 'forgot' && 'Transmit reset sequence.'}
-            {mode === 'reset' && 'Establish new key.'}
+            {mode === 'login' && 'Sign in with your institutional LPU email.'}
+            {mode === 'register' && 'Create a campus-only marketplace account.'}
+            {mode === 'verify' && 'Confirm your email to continue.'}
+            {mode === 'mobile-verify' && 'Confirm your mobile number to continue.'}
+            {mode === 'forgot' && 'We will send a secure reset code to your email.'}
+            {mode === 'reset' && 'Choose a fresh password for your account.'}
           </p>
         </div>
 
@@ -318,7 +320,7 @@ const Login = () => {
             </Link>
           </div>
         )}
-      </div>
+      </div></div>
     </div>
   );
 };
