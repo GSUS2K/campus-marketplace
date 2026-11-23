@@ -209,6 +209,8 @@ const MarketFeed = () => {
     return next;
   }, [products, searchQuery, sortBy]);
 
+  const featuredProduct = visibleProducts[0] || products[0];
+
   return (
     <div className="w-full min-h-screen pb-32 transition-colors duration-500 font-sans bg-transparent">
       <div className="w-full border-b border-theme/15 bg-bg/35 backdrop-blur-sm pt-28 pb-2">
@@ -219,26 +221,20 @@ const MarketFeed = () => {
         />
       </div>
 
-      <header className="relative overflow-hidden border-b border-theme/10 bg-bg/15 px-5 py-12 sm:px-10 sm:py-16">
-        <div className="absolute -right-16 -top-24 h-72 w-72 rounded-full bg-accent/20 blur-3xl" />
-        <div className="relative z-10 mx-auto flex max-w-7xl flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-2xl">
-            <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.25em] text-accent">The campus exchange</p>
-            <h1 className="text-4xl font-semibold leading-[0.95] tracking-[-0.07em] sm:text-6xl">Good finds.<br /><span className="text-theme/45">Better nearby.</span></h1>
-            <p className="mt-5 max-w-lg text-sm leading-relaxed text-theme/60">Buy from people around you, sell what you no longer need, and keep campus life moving.</p>
-          </div>
-            <div className="grid max-w-md grid-cols-3 gap-2 sm:gap-3">
-            {[[isLoading ? '—' : `${products.length}`, 'verified listings'], [`${CATEGORIES.length - 1}`, 'categories'], ['LPU', 'campus only']].map(([value, label]) => <div key={label} className="glass-panel rounded-2xl p-4"><p className="text-xl font-semibold sm:text-2xl">{value}</p><p className="mt-1 text-[9px] uppercase tracking-[0.16em] text-theme/45">{label}</p></div>)}
-          </div>
+      <header className="storefront-hero relative overflow-hidden px-5 pb-12 pt-10 sm:px-8 sm:pb-16 sm:pt-16">
+        <div className="storefront-orb storefront-orb-one" /><div className="storefront-orb storefront-orb-two" />
+        <div className="relative z-10 mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.04fr_0.96fr] lg:items-end">
+          <div className="max-w-2xl lg:pb-6"><p className="mb-5 text-[10px] font-bold uppercase tracking-[0.32em] text-accent">The LPU circular marketplace</p><h1 className="max-w-xl text-5xl font-semibold leading-[0.86] tracking-[-0.08em] sm:text-7xl">Find it<br />before you<br /><span className="text-theme/45">buy new.</span></h1><p className="mt-7 max-w-md text-base leading-relaxed text-theme/60">Useful things from people around you, verified for campus life. Browse slowly, buy locally, and keep good stuff moving.</p><div className="mt-8 flex flex-wrap gap-3"><button onClick={() => document.getElementById('catalogue')?.scrollIntoView({ behavior: 'smooth' })} className="rounded-full bg-theme px-6 py-3 text-xs font-bold text-bg transition hover:opacity-85">Explore the catalogue <ArrowRight className="ml-1 inline" size={14} /></button><Link to={`/requests${demoSuffix}`} className="rounded-full border border-theme/20 px-6 py-3 text-xs font-semibold transition hover:bg-theme/8">Looking for something?</Link></div></div>
+          <div className="relative mx-auto w-full max-w-md lg:mx-0 lg:justify-self-end">{featuredProduct ? <Link to={productHref(featuredProduct._id, demoSuffix)} className="featured-listing group block"><div className="absolute -left-7 top-10 hidden rounded-full border border-theme/15 bg-bg/80 px-4 py-2 text-[9px] font-bold uppercase tracking-[0.18em] backdrop-blur sm:block">Just listed</div><div className="relative aspect-[4/5] overflow-hidden rounded-[2.25rem] border border-white/30 bg-theme/10"><ProductImage src={featuredProduct.images?.[0]} alt={featuredProduct.title} title={featuredProduct.title} className="h-full w-full transition duration-700 group-hover:scale-105" /><div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent px-6 pb-6 pt-20 text-white"><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/65">Featured near {featuredProduct.campusLocation}</p><div className="mt-2 flex items-end justify-between gap-4"><h2 className="max-w-[70%] text-2xl font-semibold leading-[0.95] tracking-[-0.05em]">{featuredProduct.title}</h2><span className="text-lg font-semibold">Rs. {Number(featuredProduct.price || 0).toLocaleString()}</span></div></div></div></Link> : <div className="aspect-[4/5] animate-pulse rounded-[2.25rem] bg-theme/10" />}</div>
         </div>
+        <div className="relative z-10 mx-auto mt-12 grid max-w-7xl grid-cols-3 border-t border-theme/12 pt-5 sm:max-w-7xl"><div><p className="text-2xl font-semibold">{isLoading ? '—' : products.length}</p><p className="mt-1 text-[9px] font-bold uppercase tracking-[0.16em] text-theme/45">Live listings</p></div><div><p className="text-2xl font-semibold">{CATEGORIES.length - 1}</p><p className="mt-1 text-[9px] font-bold uppercase tracking-[0.16em] text-theme/45">Ways to browse</p></div><div><p className="text-2xl font-semibold">LPU</p><p className="mt-1 text-[9px] font-bold uppercase tracking-[0.16em] text-theme/45">Campus only</p></div></div>
       </header>
 
-      <section className="mx-auto grid max-w-7xl gap-3 px-5 py-5 sm:grid-cols-2 sm:px-8 lg:grid-cols-4">
-        {COLLECTIONS.map(({ category, label, description, icon: Icon }) => <button key={category} onClick={() => { setActiveCategory(category); window.scrollTo({ top: 520, behavior: 'smooth' }); }} className="group glass-panel rounded-2xl p-4 text-left transition hover:-translate-y-0.5 hover:border-accent/40"><div className="flex items-start justify-between"><Icon size={18} className="text-accent" /><ArrowRight size={16} className="text-theme/35 transition group-hover:translate-x-1 group-hover:text-theme" /></div><h2 className="mt-7 text-base font-semibold normal-case tracking-[-0.03em]">{label}</h2><p className="mt-1 text-xs leading-relaxed text-theme/55">{description}</p></button>)}
-      </section>
+      <section className="mx-auto max-w-7xl px-5 py-12 sm:px-8"><div className="mb-6 flex items-end justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[0.24em] text-theme/45">Start somewhere useful</p><h2 className="mt-2 text-2xl font-semibold tracking-[-0.05em]">Browse by campus life.</h2></div><button onClick={() => setActiveCategory('All Listings')} className="hidden text-xs font-semibold text-theme/55 hover:text-theme sm:block">See everything</button></div><div className="collection-rail grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{COLLECTIONS.map(({ category, label, description, icon: Icon }, index) => <button key={category} onClick={() => { setActiveCategory(category); document.getElementById('catalogue')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }} className={`collection-tile collection-tile-${index} group rounded-[1.6rem] p-5 text-left text-white`}><div className="flex items-start justify-between"><span className="grid h-10 w-10 place-items-center rounded-full bg-white/15 backdrop-blur"><Icon size={18} /></span><ArrowRight size={18} className="transition group-hover:translate-x-1" /></div><h2 className="mt-16 text-xl font-semibold normal-case tracking-[-0.04em]">{label}</h2><p className="mt-2 max-w-[13rem] text-xs leading-relaxed text-white/70">{description}</p></button>)}</div></section>
 
       <section className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-5 pb-5 sm:px-8"><span className="mr-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-theme/40">Popular on campus</span>{['calculator', 'hostel', 'notes', 'headphones', 'hoodie'].map((term) => <button key={term} onClick={() => setSearchQuery(term)} className="rounded-full border border-theme/12 px-3 py-1.5 text-xs text-theme/65 transition hover:border-accent/40 hover:text-theme">{term}</button>)}</section>
 
+      <div id="catalogue" className="catalogue-anchor" />
       <div className="glass-panel sticky top-[88px] z-40 border-x-0 border-t-0 rounded-none px-4 sm:px-8 py-5 transition-colors duration-500">
         <div className="flex flex-col lg:flex-row gap-4 lg:items-center lg:justify-between">
           <div className="flex gap-4 overflow-x-auto scrollbar-hide font-bold text-[14px]">
